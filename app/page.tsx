@@ -1,3 +1,4 @@
+import Link from "next/link";
 export default function Home() {
   return (
     <main className="relative w-full h-screen overflow-hidden flex items-center bg-zinc-900">
@@ -28,7 +29,22 @@ export default function Home() {
         <p className="text-lg sm:text-xl font-normal leading-relaxed text-zinc-100">
           Adopta, cambia una vida y gana un compañero para siempre.
         </p>
+        {/* ---> PEGA O REEMPLAZA EL BOTÓN EXACTAMENTE AQUÍ <--- */}
+            <Link
+              href="/perros"
+              className="inline-flex items-center space-x-2 bg-amber-400 hover:bg-amber-500 text-gray-900 font-bold px-6 py-3.5 rounded-full shadow-lg transition-transform transform hover:scale-105 cursor-pointer">
+              <span>🐾</span>
+              <span>Adoptar ahora</span>
+              <svg className="w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </Link>
+
+          
       </div>
     </main>
+   
+  
   );
+  
 }
