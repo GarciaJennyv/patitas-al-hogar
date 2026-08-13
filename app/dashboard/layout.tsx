@@ -1,12 +1,78 @@
+import Link from "next/link";
+import { PawPrint, LogOut, PlusCircle, LayoutDashboard, Compass } from "lucide-react";
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-zinc-900 text-white font-sans">
-      {/* Contenido de la página del Dashboard */}
-      {children}
+    <div className="min-h-screen bg-stone-900 text-white font-sans flex flex-col">
+      {/* Barra de navegación superior del Dashboard */}
+      <header className="bg-stone-800/80 backdrop-blur-md border-b border-stone-700/80 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          
+          {/* Logo / Nombre de la plataforma */}
+          <Link href="/dashboard" className="flex items-center gap-2.5 group">
+            <div className="bg-stone-900 p-2 rounded-xl border border-stone-700 text-[#f4c430] group-hover:border-[#f4c430] transition">
+              <PawPrint className="w-5 h-5" />
+            </div>
+            <span className="font-extrabold text-lg tracking-tight text-white group-hover:text-[#f4c430] transition">
+              Patitas al Hogar <span className="text-xs text-[#f4c430] font-semibold bg-[#f4c430]/10 border border-[#f4c430]/30 px-2 py-0.5 rounded-full ml-1">Admin</span>
+            </span>
+          </Link>
+
+          {/* Menú de navegación rápida */}
+          <nav className="flex items-center gap-2 sm:gap-4">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-stone-300 hover:text-[#f4c430] px-3 py-2 rounded-xl hover:bg-stone-700/50 transition"
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              <span className="hidden sm:inline">Panel</span>
+            </Link>
+
+            <Link
+              href="/dashboard/razas"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-stone-300 hover:text-[#f4c430] px-3 py-2 rounded-xl hover:bg-stone-700/50 transition"
+            >
+              <Compass className="w-4 h-4" />
+              <span className="hidden sm:inline">Razas API</span>
+            </Link>
+
+            <Link
+              href="/dashboard/nueva-mascota"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-stone-900 bg-[#f4c430] hover:bg-[#e0b020] px-3.5 py-2 rounded-xl transition shadow-sm"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Nueva Mascota</span>
+            </Link>
+
+            <div className="h-4 w-px bg-stone-700 mx-1" />
+
+            {/* Enlace o botón para salir */}
+            <Link
+              href="/dashboard/login"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-stone-400 hover:text-red-400 p-2 rounded-xl hover:bg-stone-700/50 transition"
+              title="Cerrar Sesión"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden md:inline">Salir</span>
+            </Link>
+          </nav>
+
+        </div>
+      </header>
+
+      {/* Contenido dinámico de las páginas dentro de /dashboard */}
+      <div className="flex-grow">
+        {children}
+      </div>
+
+      {/* Pie de página administrativo discreto */}
+      <footer className="border-t border-stone-800 bg-stone-900/50 py-4 text-center text-xs text-stone-500">
+        Patitas al Hogar • Sistema de Gestión de Refugios y Adopción
+      </footer>
     </div>
   );
 }

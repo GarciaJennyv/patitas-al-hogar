@@ -1,9 +1,10 @@
 import Link from "next/link";
+import BottomNav from "@/components/BottomNav";
 
 export default function Home() {
   return (
-    <main className="relative w-full h-screen overflow-hidden flex items-center bg-zinc-900">
-      {/* Imagen de fondo del perrito sentado */}
+    <main className="relative w-full h-[calc(100vh-64px)] overflow-hidden flex items-center bg-zinc-900">
+      {/* Imagen de fondo del perrito */}
       <div className="absolute inset-0 z-0">
         <img
           src="amigo.jpg"
@@ -14,18 +15,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-black/40 sm:bg-black/25" />
       </div>
 
-      {/* 🐾 BOTÓN PANEL ADMIN (Ubicado en la parte superior DERECHA) */}
-      <div className="absolute top-6 right-6 z-20">
-        <Link
-          href="/loginadmin"
-          className="group flex items-center gap-2 bg-amber-100/90 hover:bg-amber-400 text-gray-900 font-bold px-4 py-2 rounded-xl border border-amber-300 transition shadow-md cursor-pointer"
-        >
-          <span className="text-lg group-hover:animate-bounce">🐾</span>
-          <span className="text-xs sm:text-sm">Panel</span>
-        </Link>
-      </div>
-
-      {/* Contenido de texto alineado a la izquierda */}
+      {/* Contenido de texto centrado/izquierdo (Sin header/navbar interno) */}
       <div className="relative z-10 px-8 sm:px-16 md:px-24 max-w-2xl text-white">
         <h1 className="text-4xl sm:text-6xl font-extrabold leading-tight tracking-tight mb-6">
           Tu mejor <span className="text-[#f4c430]">amigo</span> está esperando por <span className="text-[#f4c430]">ti.</span>
@@ -42,7 +32,7 @@ export default function Home() {
           Adopta, cambia una vida y gana un compañero para siempre.
         </p>
 
-        {/* Botón Adoptar Ahora */}
+        {/* Botón Adoptar Ahora -> Redirige a /perros */}
         <Link
           href="/perros"
           className="inline-flex items-center space-x-2 bg-amber-400 hover:bg-amber-500 text-gray-900 font-bold px-6 py-3.5 rounded-full shadow-lg transition-transform transform hover:scale-105 cursor-pointer"
@@ -54,6 +44,9 @@ export default function Home() {
           </svg>
         </Link>
       </div>
+
+      {/* Barra de navegación inferior fija para móviles */}
+      <BottomNav />
     </main>
   );
 }

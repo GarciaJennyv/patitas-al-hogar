@@ -1,98 +1,147 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { PawPrint } from "lucide-react";
+import { ArrowLeft, HeartHandshake, User, Mail, Lock } from "lucide-react";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setError(null);
 
-    try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    // 1. Iniciar sesión con Supabase Auth
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-      if (authError) throw authError;
-
-      if (data.user) {
-        // Redirigir al catálogo o al dashboard tras iniciar sesión con éxito
-        router.push("/perros");
-      }
-    } catch (err: any) {
-      setError(err.message || "Correo o contraseña incorrectos");
-    } finally {
+    if (authError) {
+      setError("Correo o contraseña incorrectos. Revisa tus datos.");
       setLoading(false);
+      return;
+    }
+
+    // 2. Consultar el rol del usuario en la tabla de perfiles
+    const { data: perfil, error: perfilError } = await supabase
+      .from("perfiles")
+      .select("rol")
+      .eq("id", data.user.id)
+      .single();
+
+    if (perfilError || !perfil) {
+      // Si no tiene perfil aún, redirigir al flujo principal
+      router.push("/perros");
+      return;
+    }
+
+    // 3. Bloquear acceso si intenta ingresar un Administrador por esta vía
+    if (perfil.rol === "admin") {
+      await supabase.auth.signOut();
+      setError("Acceso denegado. Si eres Administrador, debes ingresar por el portal específico.");
+      setLoading(false);
+      return;
+    }
+
+    // 4. Redirección según el rol
+    if (perfil.rol === "refugio") {
+      router.push("/dashboard"); // Panel del Refugio para subir/gestionar perros
+    } else {
+      router.push("/perros"); // Catálogo para Adoptantes
     }
   };
 
   return (
-    <div className="min-h-screen bg-stone-900 flex items-center justify-center p-6 text-white">
-      <div className="max-w-md w-full bg-stone-800 p-8 rounded-3xl shadow-2xl border border-stone-700">
+    <main className="min-h-screen bg-stone-100 flex items-center justify-center p-6">
+      <div className="max-w-md w-full">
         
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <PawPrint className="w-8 h-8 text-[#f4c430]" />
-          <h1 className="text-2xl font-extrabold">Iniciar Sesión</h1>
+        {/* Enlace para regresar */}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-stone-600 hover:text-amber-600 text-sm mb-6 transition font-medium"
+        >
+          <ArrowLeft className="w-4 h-4" /> Volver al inicio
+        </Link>
+
+        {/* Tarjeta de Formulario */}
+        <div className="bg-white border border-stone-200 p-8 rounded-3xl shadow-xl">
+          
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center bg-amber-100 p-3 rounded-2xl text-[#f4c430] mb-3">
+              <HeartHandshake className="w-8 h-8 text-amber-600" />
+            </div>
+            <h1 className="text-2xl font-black text-stone-800">
+              ¡Bienvenido a Patitas al Hogar!
+            </h1>
+            <p className="text-stone-500 text-xs mt-1">
+              Ingresa como <strong className="text-stone-700">Adoptante</strong> o <strong className="text-stone-700">Refugio</strong>
+            </p>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 text-xs p-3 rounded-xl mb-6 text-center">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs uppercase font-bold text-stone-500 mb-1 flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5" /> Correo Electrónico
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="tu@correo.com"
+                className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-stone-800 focus:outline-none focus:border-amber-400 text-sm"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase font-bold text-stone-500 mb-1 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5" /> Contraseña
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-stone-800 focus:outline-none focus:border-amber-400 text-sm"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#f4c430] hover:bg-[#e0b020] text-stone-900 font-bold py-3.5 rounded-xl transition shadow-md mt-2 cursor-pointer text-sm disabled:opacity-50"
+            >
+              {loading ? "Ingresando..." : "Iniciar Sesión"}
+            </button>
+          </form>
+
+          {/* Registro y Pie de formulario */}
+          <div className="mt-8 pt-6 border-t border-stone-100 text-center">
+            <p className="text-xs text-stone-500">
+              ¿No tienes una cuenta?{" "}
+              <Link href="/register" className="text-amber-600 font-bold hover:underline">
+                Regístrate aquí
+              </Link>
+            </p>
+          </div>
+
         </div>
-
-        {error && (
-          <div className="bg-red-500/20 border border-red-500 text-red-200 p-3 rounded-xl mb-4 text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Correo electrónico</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-stone-900 border border-stone-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f4c430]"
-              placeholder="correo@ejemplo.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Contraseña</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-stone-900 border border-stone-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f4c430]"
-              placeholder="••••••••"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#f4c430] hover:bg-[#e0b020] text-stone-900 font-bold py-3 rounded-xl transition shadow-lg mt-2"
-          >
-            {loading ? "Iniciando sesión..." : "Entrar"}
-          </button>
-        </form>
-
-        <p className="text-center text-stone-400 text-sm mt-6">
-          ¿No tienes una cuenta?{" "}
-          <Link href="/register" className="text-[#f4c430] hover:underline font-medium">
-            Regístrate aquí
-          </Link>
-        </p>
       </div>
-    </div>
+    </main>
   );
 }

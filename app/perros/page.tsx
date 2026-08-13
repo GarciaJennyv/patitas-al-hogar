@@ -1,8 +1,9 @@
-import Navbar from "@/components/Navbar";
+
 import Link from "next/link";
+import { Heart, ArrowLeft } from "lucide-react";
 
 export default function PerrosPage() {
-  // Lista de ejemplo temporal (aquí luego puedes conectar tu API o Supabase)
+  // Lista de ejemplo temporal (luego se reemplaza con Supabase / API)
   const perritos = [
     { id: 1, nombre: "Max", raza: "Golden Retriever", edad: "2 años", imagen: "/amigo.jpg" },
     { id: 2, nombre: "Luna", raza: "Pastor Alemán", edad: "1 año", imagen: "/amigo.jpg" },
@@ -10,34 +11,63 @@ export default function PerrosPage() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Barra de navegación superior reutilizable */}
-      <Navbar />
+    <main className="min-h-screen bg-stone-900 text-white p-6 md:p-12">
+      <div className="max-w-6xl mx-auto">
+        
+        {/* Navegación de retorno */}
+        <Link 
+          href="/" 
+          className="inline-flex items-center gap-2 text-[#f4c430] hover:underline mb-8 font-medium"
+        >
+          <ArrowLeft className="w-5 h-5" /> Volver al inicio
+        </Link>
 
-      <main className="flex-grow max-w-6xl mx-auto px-6 py-10 w-full">
-        <div className="mb-8">
-          <h1 className="text-3xl font-extrabold text-gray-900">Mascotas en adopción</h1>
-          <p className="text-gray-600 mt-1">Conoce a nuestros perritos que buscan un hogar lleno de amor.</p>
+        {/* Encabezado */}
+        <div className="mb-10 text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-white">Mascotas en adopción</h1>
+            <p className="text-stone-400 text-sm md:text-base mt-1">
+              Conoce a nuestros perritos que buscan un hogar lleno de amor.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/razas"
+            className="text-xs bg-stone-800 hover:bg-stone-700 text-[#f4c430] border border-stone-700 font-semibold px-4 py-2 rounded-xl transition"
+          >
+            Ver guía de razas 🐶
+          </Link>
         </div>
 
         {/* Cuadrícula de tarjetas de perritos */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {perritos.map((perro) => (
-            <div key={perro.id} className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100 flex flex-col justify-between hover:shadow-lg transition">
+            <div 
+              key={perro.id} 
+              className="bg-stone-800 rounded-2xl border border-stone-700 overflow-hidden shadow-lg flex flex-col justify-between hover:border-[#f4c430] transition group"
+            >
               <div>
-                <div className="h-48 w-full relative bg-gray-200">
-                  <img src={perro.imagen} alt={perro.nombre} className="w-full h-full object-cover" />
+                <div className="h-52 w-full relative bg-stone-900 overflow-hidden">
+                  <img 
+                    src={perro.imagen} 
+                    alt={perro.nombre} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                  />
+                  <div className="absolute top-3 right-3 bg-stone-900/80 backdrop-blur-md p-2 rounded-full border border-stone-700 text-red-400">
+                    <Heart className="w-4 h-4 fill-red-400/20" />
+                  </div>
                 </div>
+                
                 <div className="p-5">
-                  <h2 className="text-xl font-bold text-gray-900">{perro.nombre}</h2>
-                  <p className="text-sm text-gray-500 mt-1">{perro.raza} • {perro.edad}</p>
+                  <h2 className="text-xl font-bold text-white">{perro.nombre}</h2>
+                  <p className="text-sm text-stone-400 mt-1">{perro.raza} • {perro.edad}</p>
                 </div>
               </div>
+
               <div className="p-5 pt-0">
-                {/* Enlace hacia la ruta dinámica de detalle: /perros/[id] */}
+                {/* Ruta dinámica de detalle */}
                 <Link
                   href={`/perros/${perro.id}`}
-                  className="block text-center w-full bg-amber-400 hover:bg-amber-500 text-gray-900 font-bold py-2.5 rounded-xl transition shadow-sm"
+                  className="block text-center w-full bg-[#f4c430] hover:bg-[#e0b020] text-stone-900 font-bold py-2.5 rounded-xl transition shadow-md"
                 >
                   Ver Detalle
                 </Link>
@@ -45,7 +75,8 @@ export default function PerrosPage() {
             </div>
           ))}
         </div>
-      </main>
-    </div>
+
+      </div>
+    </main>
   );
 }

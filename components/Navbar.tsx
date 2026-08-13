@@ -1,46 +1,50 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function Navbar() {
+  const pathname = usePathname();
+
+  // Ocultar el Navbar en el portal de login admin y login normal
+  if (pathname === "/loginadmin" || pathname === "/login") {
+    return null;
+  }
+
   return (
-    <header className="bg-white border-b border-gray-100 py-3 px-6 shadow-sm">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
+    <header className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+      {/* Logo */}
+      <Link href="/" className="flex items-center gap-2 font-bold text-lg text-gray-900">
+        <span>🐾</span>
+        <span>
+          Patitas <span className="text-[#f4c430]">al Hogar</span>
+        </span>
+      </Link>
+
+      {/* Menú de Navegación */}
+      <nav className="flex items-center gap-6">
         
-        {/* LOGO */}
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl text-gray-900">
-          <span className="text-amber-500 text-2xl">🐾</span>
-          <span>Patitas <span className="text-amber-500">al Hogar</span></span>
+        <Link href="/perros" className="text-gray-600 hover:text-gray-900 text-sm font-medium">
+          Perros
         </Link>
 
-        {/* NAVEGACIÓN Y BOTONES (UN SOLO GRUPO) */}
-        <div className="flex items-center gap-4">
-          <Link href="/" className="text-sm font-medium text-gray-600 hover:text-amber-500 transition">
-            Inicio
-          </Link>
-          <Link href="/perros" className="text-sm font-medium text-gray-600 hover:text-amber-500 transition">
-            Perros
-          </Link>
+        {/* Botón Acceso Panel Admin */}
+        <Link
+          href="/loginadmin"
+          className="flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 text-gray-900 font-semibold px-3 py-1.5 rounded-lg border border-amber-200 transition text-xs"
+        >
+          <span>🐾</span>
+          <span>Panel Admin</span>
+        </Link>
 
-          {/* BOTÓN PANEL ADMIN (ÚNICO) */}
-          <Link
-            href="/loginadmin"
-            className="flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 text-gray-900 font-semibold px-3 py-1.5 text-xs sm:text-sm rounded-xl border border-amber-300 transition shadow-sm cursor-pointer"
-          >
-            <span>🐾</span>
-            <span>Panel Admin</span>
-          </Link>
-
-          {/* BOTÓN INICIAR SESIÓN */}
-          <Link
-            href="/login"
-            className="bg-amber-400 hover:bg-amber-500 text-gray-900 font-bold px-4 py-1.5 text-xs sm:text-sm rounded-full shadow transition"
-          >
-            Iniciar Sesión
-          </Link>
-        </div>
-
-      </div>
+        {/* Botón Iniciar Sesión General */}
+        <Link
+          href="/login"
+          className="bg-[#f4c430] hover:bg-[#e0b020] text-gray-900 font-bold px-4 py-2 rounded-xl transition text-xs"
+        >
+          Iniciar Sesión
+        </Link>
+      </nav>
     </header>
   );
 }

@@ -2,6 +2,7 @@
 
 import { supabase } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export async function crearMascota(formData: FormData) {
   const nombre = formData.get("nombre") as string;
@@ -9,17 +10,38 @@ export async function crearMascota(formData: FormData) {
   const edad = formData.get("edad") as string;
   const descripcion = formData.get("descripcion") as string;
   const imagen = formData.get("imagen") as string;
-  
-  // Obtener el ID del usuario logueado
-  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) throw new Error("Debes iniciar sesión para publicar.");
+  // 1. Obtener sesión actual del usuario desde Supabase
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  const { error } = await supabase.from("mascotas").insert([
-    { nombre, raza, edad, descripcion, imagen, user_id: user.id }
+  if (authError || !user) {
+    throw new Error("Debes iniciar sesión para publicar una mascota.");
+  }
+
+  // 2. Insertar en la tabla de mascotas vinculando el user_id
+  const { error: insertError } = await supabase.from("mascotas").insert([
+    {
+      nombre,
+      raza,
+      edad,
+      descripcion,
+      imagen,
+      user_id: user.id,
+    },
   ]);
 
-  if (error) throw new Error(error.message);
+  if (insertError) {
+    console.error("Error Supabase:", insertError.message);
+    throw new Error(`No se pudo crear la mascota: ${insertError.message}`);
+  }
 
+  // 3. Purgar caché de las rutas que listan mascotas
+  revalidatePath("/dashboard");
   revalidatePath("/perros");
+
+  // 4. Redirigir al usuario
+  redirect("/dashboard");
 }

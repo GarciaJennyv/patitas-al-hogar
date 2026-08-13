@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PawPrint } from "lucide-react";
@@ -18,41 +17,43 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  // Dentro de app/register/page.tsx
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setSuccess(false);
 
-const handleRegister = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError("");
+    try {
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, nombre, rol }),
+      });
 
-  try {
-    const res = await fetch("/api/auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, nombre, rol }),
-    });
+      const data = await res.json();
 
-    const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.details || data.error || "Error al registrar");
+      }
 
-    if (!res.ok) {
-      throw new Error(data.details || data.error || "Error al registrar");
+      setSuccess(true);
+
+      // Redirección con una pequeña pausa para mostrar el mensaje
+      setTimeout(() => {
+        if (rol === "refugio") {
+          router.push("/dashboard");
+        } else {
+          router.push("/mascotas"); // Ajustado a la ruta estándar de mascotas
+        }
+      }, 1500);
+
+    } catch (err: any) {
+      console.error("Error devuelto:", err);
+      setError(err.message || "Ocurrió un error inesperado");
+    } finally {
+      setLoading(false);
     }
-
-    alert("¡Usuario registrado exitosamente!");
-    // Redireccionar según el rol
-    if (rol === "refugio") {
-      router.push("/dashboard");
-    } else {
-      router.push("/perros");
-    }
-
-  } catch (err: any) {
-    console.error("Error devuelto:", err);
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-stone-900 flex items-center justify-center p-6 text-white font-sans">
@@ -127,16 +128,16 @@ const handleRegister = async (e: React.FormEvent) => {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || success}
             className="w-full bg-[#f4c430] hover:bg-[#e0b020] text-stone-900 font-bold py-3 rounded-xl transition shadow-lg mt-4 cursor-pointer disabled:opacity-50"
           >
-            {loading ? "Registrando..." : "Registrarse"}
+            {loading ? "Registrando..." : success ? "¡Registrado!" : "Registrarse"}
           </button>
         </form>
 
         <p className="text-center text-stone-400 text-sm mt-6">
           ¿Ya tienes una cuenta?{" "}
-          <Link href="/loginadmin" className="text-[#f4c430] hover:underline font-medium">
+          <Link href="/login" className="text-[#f4c430] hover:underline font-medium">
             Inicia sesión aquí
           </Link>
         </p>

@@ -1,14 +1,14 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ShieldAlert } from "lucide-react";
 
-// Interfaz para tipar los datos que vienen de la API externa
+// Definición de la interfaz de la API
 interface RazaPerro {
   id: number;
   name: string;
-  bred_for?: string;
   temperament?: string;
+  bred_for?: string;
   image?: {
+    id: string;
     url: string;
   };
 }
@@ -17,7 +17,7 @@ interface RazaPerro {
 async function obtenerRazasExternas(): Promise<RazaPerro[]> {
   try {
     const res = await fetch("https://api.thedogapi.com/v1/breeds?limit=8", {
-      // Opcional: revalidar cada cierto tiempo para optimizar
+      // Revalida la respuesta cada 3600 segundos (1 hora)
       next: { revalidate: 3600 },
     });
 
@@ -40,12 +40,17 @@ export default async function RazasExternasPage() {
       <div className="max-w-6xl mx-auto">
         
         {/* Navegación de retorno */}
-        <Link href="/" className="inline-flex items-center gap-2 text-[#f4c430] hover:underline mb-8 font-medium">
+        <Link 
+          href="/" 
+          className="inline-flex items-center gap-2 text-[#f4c430] hover:underline mb-8 font-medium"
+        >
           <ArrowLeft className="w-5 h-5" /> Volver al inicio
         </Link>
 
         <div className="mb-10 text-center">
-          <h1 className="text-3xl md:text-4xl font-extrabold mb-3">Catálogo de Referencia (API Externa)</h1>
+          <h1 className="text-3xl md:text-4xl font-extrabold mb-3">
+            Catálogo de Referencia (API Externa)
+          </h1>
           <p className="text-stone-400 max-w-2xl mx-auto text-sm md:text-base">
             Información y características de distintas razas obtenidas en tiempo real desde The Dog API para complementar nuestra plataforma de adopción.
           </p>
