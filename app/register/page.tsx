@@ -8,52 +8,54 @@ import { PawPrint } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
+
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rol, setRol] = useState("adoptante"); // Valor por defecto
-  const [error, setError] = useState("");
+  const [rol, setRol] = useState<"adoptante" | "refugio">("adoptante");
+
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+  // Dentro de app/register/page.tsx
 
-    try {
-      // 1. Registrar usuario en Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+const handleRegister = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
 
-      if (authError) throw authError;
+  try {
+    const res = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, nombre, rol }),
+    });
 
-      if (authData.user) {
-        // 2. Insertar el perfil y el rol seleccionado en la tabla relacional 'profiles'
-        const { error: profileError } = await supabase.from("profiles").insert([
-          {
-            id: authData.user.id,
-            nombre,
-            email,
-            rol,
-          },
-        ]);
+    const data = await res.json();
 
-        if (profileError) throw profileError;
-
-        // Redirigir al inicio o al dashboard según prefieras
-        router.push("/");
-      }
-    } catch (err: any) {
-      setError(err.message || "Ocurrió un error al registrarse");
-    } finally {
-      setLoading(false);
+    if (!res.ok) {
+      throw new Error(data.details || data.error || "Error al registrar");
     }
-  };
+
+    alert("¡Usuario registrado exitosamente!");
+    // Redireccionar según el rol
+    if (rol === "refugio") {
+      router.push("/dashboard");
+    } else {
+      router.push("/perros");
+    }
+
+  } catch (err: any) {
+    console.error("Error devuelto:", err);
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
-    <div className="min-h-screen bg-stone-900 flex items-center justify-center p-6 text-white">
+    <div className="min-h-screen bg-stone-900 flex items-center justify-center p-6 text-white font-sans">
       <div className="max-w-md w-full bg-stone-800 p-8 rounded-3xl shadow-2xl border border-stone-700">
         
         <div className="flex items-center justify-center gap-2 mb-6">
@@ -64,6 +66,12 @@ export default function RegisterPage() {
         {error && (
           <div className="bg-red-500/20 border border-red-500 text-red-200 p-3 rounded-xl mb-4 text-sm">
             {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-green-500/20 border border-green-500 text-green-200 p-3 rounded-xl mb-4 text-sm text-center">
+            ¡Cuenta creada exitosamente! Redirigiendo...
           </div>
         )}
 
@@ -97,6 +105,7 @@ export default function RegisterPage() {
             <input
               type="password"
               required
+              minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-stone-900 border border-stone-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f4c430]"
@@ -108,19 +117,18 @@ export default function RegisterPage() {
             <label className="block text-sm font-medium mb-1">Selecciona tu rol</label>
             <select
               value={rol}
-              onChange={(e) => setRol(e.target.value)}
-              className="w-full bg-stone-900 border border-stone-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f4c430]"
+              onChange={(e) => setRol(e.target.value as "adoptante" | "refugio")}
+              className="w-full bg-stone-900 border border-stone-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f4c430] cursor-pointer"
             >
               <option value="adoptante">Adoptante (Busca adoptar)</option>
               <option value="refugio">Refugio (Publica mascotas)</option>
-              <option value="admin">Administrador (Gestión general)</option>
             </select>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#f4c430] hover:bg-[#e0b020] text-stone-900 font-bold py-3 rounded-xl transition shadow-lg mt-2"
+            className="w-full bg-[#f4c430] hover:bg-[#e0b020] text-stone-900 font-bold py-3 rounded-xl transition shadow-lg mt-4 cursor-pointer disabled:opacity-50"
           >
             {loading ? "Registrando..." : "Registrarse"}
           </button>
@@ -128,7 +136,7 @@ export default function RegisterPage() {
 
         <p className="text-center text-stone-400 text-sm mt-6">
           ¿Ya tienes una cuenta?{" "}
-          <Link href="/login" className="text-[#f4c430] hover:underline font-medium">
+          <Link href="/loginadmin" className="text-[#f4c430] hover:underline font-medium">
             Inicia sesión aquí
           </Link>
         </p>
