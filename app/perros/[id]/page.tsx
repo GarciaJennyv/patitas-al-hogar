@@ -1,59 +1,26 @@
 import Link from "next/link";
 import { ArrowLeft, Heart, ShieldCheck, MapPin, Calendar, Dog } from "lucide-react";
-
-// Datos de prueba simulando la consulta a una base de datos o API
-const perritos = [
-  {
-    id: 1,
-    nombre: "Max",
-    raza: "Golden Retriever",
-    edad: "2 años",
-    sexo: "Macho",
-    ubicacion: "Quito, Norte",
-    vacunado: true,
-    esterilizado: true,
-    descripcion: "Max es un perrito muy juguetón, cariñoso y amigable con niños y otras mascotas. Le encanta salir a correr por las mañanas y aprender nuevos trucos.",
-    imagen: "/amigo.jpg",
-  },
-  {
-    id: 2,
-    nombre: "Luna",
-    raza: "Pastor Alemán",
-    edad: "1 año",
-    sexo: "Hembra",
-    ubicacion: "Quito, Valle de los Chillos",
-    vacunado: true,
-    esterilizado: true,
-    descripcion: "Luna es muy obediente, protectora y leal. Se adapta rápido a nuevos entornos y le gusta acompañar a su familia en paseos al aire libre.",
-    imagen: "/amigo.jpg",
-  },
-  {
-    id: 3,
-    nombre: "Rocky",
-    raza: "Labrador",
-    edad: "3 años",
-    sexo: "Macho",
-    ubicacion: "Quito, Sur",
-    vacunado: true,
-    esterilizado: false,
-    descripcion: "Rocky es tranquilo, noble y muy paciente. Es el compañero perfecto para la vida en departamento o casa con jardín.",
-    imagen: "/amigo.jpg",
-  },
-];
+import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
 
 interface Props {
   params: Promise<{ id: string }>;
 }
 
 export default async function PerroDetallePage({ params }: Props) {
-  // En Next.js 15, params es una promesa que debemos resolver
   const resolvedParams = await params;
-  const perroId = Number(resolvedParams.id);
+  const perroId = resolvedParams.id;
 
-  // Buscamos la mascota seleccionada por id
-  const perro = perritos.find((p) => p.id === perroId);
+  const supabase = await createClient();
 
-  if (!perro) {
+  // 1. Obtener los datos reales de la mascota desde Supabase
+  const { data: perro, error } = await supabase
+    .from("mascotas")
+    .select("*")
+    .eq("id", perroId)
+    .single();
+
+  if (error || !perro) {
     return (
       <main className="min-h-screen bg-stone-900 text-white flex flex-col items-center justify-center p-6 text-center">
         <Dog className="w-16 h-16 text-[#f4c430] mb-4 opacity-80" />
@@ -67,6 +34,32 @@ export default async function PerroDetallePage({ params }: Props) {
         </Link>
       </main>
     );
+  }
+
+  // 2. Server Action para registrar la solicitud en Supabase
+  async function solicitarAdopcionAction() {
+    "use server";
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      redirect("/login");
+    }
+
+    const { error: insertError } = await supabase
+      .from("solicitudes_adopcion")
+      .insert({
+        mascota_id: perro.id,
+        refugio_id: perro.refugio_id || null,
+        adoptante_id: user.id,
+      });
+
+    if (insertError) {
+      console.error("Error al registrar solicitud:", insertError.message);
+      return;
+    }
+
+    redirect("/dashboard");
   }
 
   return (
@@ -87,7 +80,7 @@ export default async function PerroDetallePage({ params }: Props) {
           {/* Imagen de la mascota */}
           <div className="relative h-72 md:h-full bg-stone-900 min-h-[300px]">
             <img
-              src={perro.imagen}
+              src={perro.imagen_url || "/amigo.jpg"}
               alt={perro.nombre}
               className="w-full h-full object-cover"
             />
@@ -101,14 +94,16 @@ export default async function PerroDetallePage({ params }: Props) {
             <div>
               <div className="flex justify-between items-start mb-2">
                 <h1 className="text-3xl font-black text-white">{perro.nombre}</h1>
-                <span className="bg-[#f4c430]/20 text-[#f4c430] text-xs font-bold px-3 py-1 rounded-full border border-[#f4c430]/30">
-                  {perro.sexo}
-                </span>
+                {perro.sexo && (
+                  <span className="bg-[#f4c430]/20 text-[#f4c430] text-xs font-bold px-3 py-1 rounded-full border border-[#f4c430]/30">
+                    {perro.sexo}
+                  </span>
+                )}
               </div>
 
               <p className="text-stone-400 text-sm mb-4">{perro.raza}</p>
 
-              {/* Insignias de detalles rápido */}
+              {/* Detalles rápido */}
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="bg-stone-900 p-3 rounded-xl border border-stone-700 flex items-center gap-2.5 text-xs text-stone-300">
                   <Calendar className="w-4 h-4 text-[#f4c430]" />
@@ -116,24 +111,7 @@ export default async function PerroDetallePage({ params }: Props) {
                 </div>
                 <div className="bg-stone-900 p-3 rounded-xl border border-stone-700 flex items-center gap-2.5 text-xs text-stone-300">
                   <MapPin className="w-4 h-4 text-[#f4c430]" />
-                  <span className="truncate">{perro.ubicacion}</span>
-                </div>
-              </div>
-
-              {/* Estado de Salud */}
-              <div className="space-y-2 mb-6">
-                <h3 className="text-xs uppercase tracking-wider text-stone-400 font-bold">Estado de Salud</h3>
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {perro.vacunado && (
-                    <span className="bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-lg flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5" /> Vacunas al día
-                    </span>
-                  )}
-                  {perro.esterilizado && (
-                    <span className="bg-blue-500/10 text-blue-300 border border-blue-500/30 px-3 py-1 rounded-lg flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5" /> Esterilizado/a
-                    </span>
-                  )}
+                  <span className="truncate">{perro.ubicacion || "Quito, Ecuador"}</span>
                 </div>
               </div>
 
@@ -141,20 +119,22 @@ export default async function PerroDetallePage({ params }: Props) {
               <div>
                 <h3 className="text-xs uppercase tracking-wider text-stone-400 font-bold mb-2">Sobre {perro.nombre}</h3>
                 <p className="text-stone-300 text-sm leading-relaxed">
-                  {perro.descripcion}
+                  {perro.descripcion || "Mascota en busca de un hogar amoroso."}
                 </p>
               </div>
             </div>
 
-            {/* Acciones */}
+            {/* Acción de Adopción */}
             <div className="pt-4 border-t border-stone-700">
-              <button
-                type="button"
-                className="w-full bg-[#f4c430] hover:bg-[#e0b020] text-stone-900 font-extrabold py-3.5 rounded-2xl transition shadow-lg flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span>🐾</span>
-                <span>Solicitar Adopción</span>
-              </button>
+              <form action={solicitarAdopcionAction}>
+                <button
+                  type="submit"
+                  className="w-full bg-[#f4c430] hover:bg-[#e0b020] text-stone-900 font-extrabold py-3.5 rounded-2xl transition shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>🐾</span>
+                  <span>Solicitar Adopción</span>
+                </button>
+              </form>
             </div>
 
           </div>

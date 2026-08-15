@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PawPrint } from "lucide-react";
+import { createClient } from "@/utils/supabase/client"; // Cliente navegador de Supabase
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -24,32 +25,40 @@ export default function RegisterPage() {
     setSuccess(false);
 
     try {
-      const res = await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, nombre, rol }),
+      const supabase = createClient();
+
+      // Registro directo con Supabase Auth
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            nombre,
+            rol,
+          },
+        },
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.details || data.error || "Error al registrar");
+      if (signUpError) {
+        setError(signUpError.message);
+        setLoading(false);
+        return;
       }
 
       setSuccess(true);
 
-      // Redirección con una pequeña pausa para mostrar el mensaje
+      // Redirección directa al panel correspondiente
       setTimeout(() => {
         if (rol === "refugio") {
-          router.push("/dashboard");
+          router.push("/dashboard/refugio");
         } else {
-          router.push("/mascotas"); // Ajustado a la ruta estándar de mascotas
+          router.push("/dashboard/adoptante");
         }
-      }, 1500);
+      }, 1200);
 
     } catch (err: any) {
-      console.error("Error devuelto:", err);
-      setError(err.message || "Ocurrió un error inesperado");
+      console.error("Error inesperado:", err);
+      setError("Ocurrió un error inesperado al conectar con el servicio");
     } finally {
       setLoading(false);
     }

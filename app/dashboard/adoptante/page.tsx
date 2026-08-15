@@ -9,7 +9,6 @@ import {
   User, 
   Dog, 
   CheckCircle2, 
-  Clock, 
   X, 
   FileText 
 } from "lucide-react";
@@ -44,21 +43,21 @@ export default function AdoptanteDashboardPage() {
   const [viviendaPropia, setViviendaPropia] = useState(false);
   const [permiteMascotas, setPermiteMascotas] = useState(true);
   const [tienePatioCerrado, setTienePatioCerrado] = useState(false);
+  const [aceptaCompromiso, setAceptaCompromiso] = useState(false);
   const [telefonoContacto, setTelefonoContacto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [mensajeExito, setMensajeExito] = useState(false);
 
   const router = useRouter();
 
-    useEffect(() => {
-  verificarUsuarioYCargarDatos();
-}, []);
+  useEffect(() => {
+    verificarUsuarioYCargarDatos();
+  }, []);
 
   const verificarUsuarioYCargarDatos = async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
 
-    // 1. Si no está registrado o autenticado, lo redirigimos al registro/login
     if (!user) {
       router.push("/login");
       return;
@@ -66,7 +65,6 @@ export default function AdoptanteDashboardPage() {
 
     setUsuario(user);
 
-    // 2. Cargar catálogo de perros aprobados
     const { data: perrosData } = await supabase
       .from("mascotas")
       .select("*")
@@ -74,7 +72,6 @@ export default function AdoptanteDashboardPage() {
 
     if (perrosData) setMascotas(perrosData);
 
-    // 3. Cargar solicitudes anteriores realizadas por este adoptante
     const { data: solicitudesData } = await supabase
       .from("solicitudes_adopcion")
       .select("*")
@@ -85,10 +82,19 @@ export default function AdoptanteDashboardPage() {
     setLoading(false);
   };
 
-  // Función para enviar solicitud desde el dashboard
+  const cerrarModal = () => {
+    setMascotaSeleccionada(null);
+    setTelefonoContacto("");
+    setTipoVivienda("Casa");
+    setViviendaPropia(false);
+    setPermiteMascotas(true);
+    setTienePatioCerrado(false);
+    setAceptaCompromiso(false);
+  };
+
   const enviarSolicitud = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!mascotaSeleccionada || !usuario) return;
+    if (!mascotaSeleccionada || !usuario || !aceptaCompromiso) return;
 
     setEnviando(true);
 
@@ -114,8 +120,8 @@ export default function AdoptanteDashboardPage() {
       setMensajeExito(true);
       setTimeout(() => {
         setMensajeExito(false);
-        setMascotaSeleccionada(null);
-        verificarUsuarioYCargarDatos(); // Recargar solicitudes
+        cerrarModal();
+        verificarUsuarioYCargarDatos();
       }, 2000);
     }
   };
@@ -125,7 +131,6 @@ export default function AdoptanteDashboardPage() {
     router.push("/login");
   };
 
-  // Comprobar si ya postuló a una mascota específica
   const yaPostulado = (mascotaId: string) => {
     return misSolicitudes.some((s) => s.mascota_id === mascotaId);
   };
@@ -260,7 +265,7 @@ export default function AdoptanteDashboardPage() {
             <div className="bg-stone-900 border border-stone-800 rounded-3xl p-6 max-w-md w-full relative space-y-4 max-h-[90vh] overflow-y-auto text-stone-100">
               
               <button
-                onClick={() => setMascotaSeleccionada(null)}
+                onClick={cerrarModal}
                 className="absolute top-4 right-4 text-stone-400 hover:text-white"
               >
                 <X className="w-5 h-5" />
@@ -342,14 +347,20 @@ export default function AdoptanteDashboardPage() {
                       </label>
 
                       <label className="flex items-center gap-2 font-bold text-[#f4c430] pt-2 cursor-pointer">
-                        <input type="checkbox" required defaultChecked className="accent-[#f4c430]" />
+                        <input 
+                          type="checkbox" 
+                          required 
+                          checked={aceptaCompromiso}
+                          onChange={(e) => setAceptaCompromiso(e.target.checked)}
+                          className="accent-[#f4c430]" 
+                        />
                         <span>Acepto el compromiso de esterilización y visitas de seguimiento.</span>
                       </label>
                     </div>
 
                     <button
                       type="submit"
-                      disabled={enviando}
+                      disabled={enviando || !aceptaCompromiso}
                       className="w-full bg-[#f4c430] hover:bg-[#e0b020] text-stone-950 font-bold py-3 rounded-xl transition disabled:opacity-50 cursor-pointer"
                     >
                       {enviando ? "Enviando..." : "Enviar Postulación"}
