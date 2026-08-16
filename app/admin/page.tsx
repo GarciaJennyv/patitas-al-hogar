@@ -116,9 +116,10 @@ export default function AdminDashboardPage() {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/loginadmin");
-  };
+  await supabase.auth.signOut();
+  router.push("/");
+  router.refresh();
+};
 
   if (loading) {
     return (
