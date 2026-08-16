@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
-import { ArrowLeft, HeartHandshake, User, Mail, Lock } from "lucide-react";
+import { ArrowLeft, HeartHandshake, Mail, Lock } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -18,44 +18,50 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
+    const supabase = createClient();
+
     // 1. Iniciar sesión con Supabase Auth
     const { data, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (authError) {
+    if (authError || !data.user) {
       setError("Correo o contraseña incorrectos. Revisa tus datos.");
       setLoading(false);
       return;
     }
 
-    // 2. Consultar el rol del usuario en la tabla de perfiles
-    const { data: perfil, error: perfilError } = await supabase
-      .from("perfiles")
-      .select("rol")
-      .eq("id", data.user.id)
-      .single();
+    // 2. Intentar obtener el rol desde la metadata del usuario
+    let rol = data.user.user_metadata?.rol;
 
-    if (perfilError || !perfil) {
-      // Si no tiene perfil aún, redirigir al flujo principal
-      router.push("/perros");
-      return;
+    // Si no está en la metadata, consultar la tabla de perfiles
+    if (!rol) {
+      const { data: perfil } = await supabase
+        .from("perfiles")
+        .select("rol")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      rol = perfil?.rol || "adoptante";
     }
 
-    // 3. Bloquear acceso si intenta ingresar un Administrador por esta vía
-    if (perfil.rol === "admin") {
+    // 3. Bloquear acceso a Administradores
+    if (rol === "admin") {
       await supabase.auth.signOut();
       setError("Acceso denegado. Si eres Administrador, debes ingresar por el portal específico.");
       setLoading(false);
       return;
     }
 
-    // 4. Redirección según el rol
-    if (perfil.rol === "refugio") {
-      router.push("/dashboard"); // Panel del Refugio para subir/gestionar perros
+    // 4. Refrescar las cookies de la sesión en el navegador
+    router.refresh();
+
+    // 5. Redirección según el rol
+    if (rol === "refugio") {
+      router.push("/dashboard/refugio");
     } else {
-      router.push("/perros"); // Catálogo para Adoptantes
+      router.push("/perros");
     }
   };
 

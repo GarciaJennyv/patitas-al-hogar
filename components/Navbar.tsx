@@ -7,7 +7,7 @@ export default function Navbar() {
   const pathname = usePathname();
 
   // Ocultar el Navbar en el portal de login admin y login normal
-  if (pathname === "/loginadmin" || pathname === "/login") {
+  if (pathname.startsWith("/admin")||pathname === "/loginadmin" || pathname === "/login") {
     return null;
   }
 

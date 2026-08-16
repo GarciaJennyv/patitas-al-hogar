@@ -3,121 +3,114 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ShieldCheck, Lock, Mail, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { ShieldCheck, Lock, Mail } from "lucide-react";
 
 export default function LoginAdminPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
 
-  const handleAdminLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
+    setError("");
 
-    // 1. Autenticar con Supabase Auth
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      // 1. Iniciar sesión con Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (authError) {
-      setError("Credenciales de administración inválidas.");
+      if (authError) throw new Error("Credenciales inválidas. Verifica tu correo o contraseña.");
+
+      // 2. Verificar en la base de datos si el usuario tiene rol 'admin'
+      const { data: perfil, error: perfilError } = await supabase
+        .from("perfiles")
+        .select("rol")
+        .eq("id", authData.user.id)
+        .single();
+
+      if (perfilError || perfil?.rol !== "admin") {
+        await supabase.auth.signOut(); // Revocar sesión si no es admin
+        throw new Error("Acceso denegado: Tu cuenta no tiene permisos de administrador.");
+      }
+
+      // 3. Redirigir al Dashboard (/admin)
+      router.push("/admin");
+       router.refresh();
+      
+
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // 2. Verificar que el usuario tenga el rol de 'admin'
-    const { data: perfil, error: perfilError } = await supabase
-      .from("perfiles")
-      .select("rol")
-      .eq("id", data.user.id)
-      .single();
-
-    if (perfilError || perfil?.rol !== "admin") {
-      await supabase.auth.signOut();
-      setError("Acceso denegado: Tu cuenta no tiene permisos de Administrador.");
-      setLoading(false);
-      return;
-    }
-
-    // 3. Redirigir al panel de administración
-    router.push("/dashboard");
   };
 
   return (
-    <main className="min-h-screen bg-stone-950 text-white flex items-center justify-center p-6">
-      <div className="max-w-md w-full">
+    <main className="min-h-screen bg-stone-950 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-stone-900 border border-stone-800 p-8 rounded-3xl space-y-6 shadow-2xl">
         
-        {/* Retorno */}
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-stone-400 hover:text-[#f4c430] text-sm mb-6 transition"
-        >
-          <ArrowLeft className="w-4 h-4" /> Volver al portal público
-        </Link>
-
-        {/* Tarjeta de Login Admin */}
-        <div className="bg-stone-900 border border-stone-800 p-8 rounded-3xl shadow-2xl">
-          <div className="text-center mb-8">
-            <div className="bg-stone-800 p-3 rounded-2xl border border-stone-700 text-[#f4c430] inline-block mb-3">
-              <ShieldCheck className="w-8 h-8" />
-            </div>
-            <h1 className="text-2xl font-black tracking-tight text-white">
-              Portal de Administración
-            </h1>
-            <p className="text-stone-400 text-xs mt-1">
-              Validación y control de refugios y mascotas
-            </p>
+        {/* ENCABEZADO */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex p-3 bg-[#f4c430]/10 border border-[#f4c430]/30 rounded-2xl text-[#f4c430] mb-2">
+            <ShieldCheck className="w-8 h-8" />
           </div>
+          <h1 className="text-2xl font-black text-white tracking-tight">Acceso Administrativo</h1>
+          <p className="text-xs text-stone-400">Ingresa tus credenciales de administrador para continuar</p>
+        </div>
 
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs p-3 rounded-xl mb-6 text-center">
-              {error}
-            </div>
-          )}
+        {/* MENSAJE DE ERROR */}
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs p-3 rounded-xl text-center font-medium">
+            {error}
+          </div>
+        )}
 
-          <form onSubmit={handleAdminLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs uppercase font-bold text-stone-400 mb-1 flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5" /> Correo Institucional
-              </label>
+        {/* FORMULARIO */}
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-stone-300">Correo Electrónico</label>
+            <div className="relative">
+              <Mail className="w-4 h-4 text-stone-500 absolute left-3.5 top-3.5" />
               <input
                 type="email"
+                placeholder="admin@ejemplo.com"
+                className="w-full bg-stone-950 border border-stone-800 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder-stone-600 outline-none focus:border-[#f4c430] transition"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@patitas.com"
-                className="w-full bg-stone-950 border border-stone-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f4c430] text-sm"
                 required
               />
             </div>
+          </div>
 
-            <div>
-              <label className="block text-xs uppercase font-bold text-stone-400 mb-1 flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5" /> Clave de Seguridad
-              </label>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-stone-300">Contraseña</label>
+            <div className="relative">
+              <Lock className="w-4 h-4 text-stone-500 absolute left-3.5 top-3.5" />
               <input
                 type="password"
+                placeholder="••••••••"
+                className="w-full bg-stone-950 border border-stone-800 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder-stone-600 outline-none focus:border-[#f4c430] transition"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-stone-950 border border-stone-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f4c430] text-sm"
                 required
               />
             </div>
+          </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#f4c430] hover:bg-[#e0b020] text-stone-950 font-black py-3.5 rounded-xl transition shadow-lg mt-2 cursor-pointer text-sm disabled:opacity-50"
-            >
-              {loading ? "Verificando Credenciales..." : "Ingresar al Panel Admin"}
-            </button>
-          </form>
-        </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#f4c430] hover:bg-[#e0b020] text-stone-950 font-bold py-3 rounded-xl text-sm transition cursor-pointer disabled:opacity-50 mt-2"
+          >
+            {loading ? "Verificando Credenciales..." : "Ingresar al Panel"}
+          </button>
+        </form>
+
       </div>
     </main>
   );

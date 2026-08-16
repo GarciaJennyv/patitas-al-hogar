@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
 import { PawPrint, LogOut, PlusCircle, LayoutDashboard, Compass } from "lucide-react";
 
 export default function DashboardLayout({
@@ -6,6 +10,15 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
+
   return (
     <div className="min-h-screen bg-stone-900 text-white font-sans flex flex-col">
       {/* Barra de navegación superior del Dashboard */}
@@ -50,26 +63,26 @@ export default function DashboardLayout({
 
             <div className="h-4 w-px bg-stone-700 mx-1" />
 
-            {/* Enlace o botón para salir */}
-            <Link
-              href="/dashboard/login"
-              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-stone-400 hover:text-red-400 p-2 rounded-xl hover:bg-stone-700/50 transition"
+            {/* Botón funcional para cerrar sesión */}
+            <button
+              onClick={handleSignOut}
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-stone-400 hover:text-red-400 p-2 rounded-xl hover:bg-stone-700/50 transition cursor-pointer"
               title="Cerrar Sesión"
             >
               <LogOut className="w-4 h-4" />
               <span className="hidden md:inline">Salir</span>
-            </Link>
+            </button>
           </nav>
 
         </div>
       </header>
 
-      {/* Contenido dinámico de las páginas dentro de /dashboard */}
+      {/* Contenido dinámico */}
       <div className="flex-grow">
         {children}
       </div>
 
-      {/* Pie de página administrativo discreto */}
+      {/* Pie de página administrativo */}
       <footer className="border-t border-stone-800 bg-stone-900/50 py-4 text-center text-xs text-stone-500">
         Patitas al Hogar • Sistema de Gestión de Refugios y Adopción
       </footer>
