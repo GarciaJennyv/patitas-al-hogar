@@ -25,20 +25,20 @@ export default function DashboardLayout({
       <header className="bg-stone-800/80 backdrop-blur-md border-b border-stone-700/80 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           
-          {/* Logo / Nombre de la plataforma */}
-          <Link href="/dashboard" className="flex items-center gap-2.5 group">
-            <div className="bg-stone-900 p-2 rounded-xl border border-stone-700 text-[#f4c430] group-hover:border-[#f4c430] transition">
+          {/* Logo estático (Sin comportamiento de enlace ni clic) */}
+          <div className="flex items-center gap-2.5 select-none">
+            <div className="bg-stone-900 p-2 rounded-xl border border-stone-700 text-[#f4c430]">
               <PawPrint className="w-5 h-5" />
             </div>
-            <span className="font-extrabold text-lg tracking-tight text-white group-hover:text-[#f4c430] transition">
-              Patitas al Hogar <span className="text-xs text-[#f4c430] font-semibold bg-[#f4c430]/10 border border-[#f4c430]/30 px-2 py-0.5 rounded-full ml-1">Admin</span>
+            <span className="font-extrabold text-lg tracking-tight text-white">
+              Patitas al Hogar 
             </span>
-          </Link>
+          </div>
 
           {/* Menú de navegación rápida */}
           <nav className="flex items-center gap-2 sm:gap-4">
             <Link
-              href="/dashboard"
+              href="/dashboard/refugio"
               className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-stone-300 hover:text-[#f4c430] px-3 py-2 rounded-xl hover:bg-stone-700/50 transition"
             >
               <LayoutDashboard className="w-4 h-4" />
@@ -53,8 +53,9 @@ export default function DashboardLayout({
               <span className="hidden sm:inline">Razas API</span>
             </Link>
 
+            {/* Enlace corregido a la pantalla de publicación */}
             <Link
-              href="/dashboard/nueva-mascota"
+              href="/dashboard/refugio/publicar"
               className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-stone-900 bg-[#f4c430] hover:bg-[#e0b020] px-3.5 py-2 rounded-xl transition shadow-sm"
             >
               <PlusCircle className="w-4 h-4" />
@@ -63,7 +64,7 @@ export default function DashboardLayout({
 
             <div className="h-4 w-px bg-stone-700 mx-1" />
 
-            {/* Botón funcional para cerrar sesión */}
+            {/* Botón para cerrar sesión */}
             <button
               onClick={handleSignOut}
               className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-stone-400 hover:text-red-400 p-2 rounded-xl hover:bg-stone-700/50 transition cursor-pointer"
