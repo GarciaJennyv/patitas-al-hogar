@@ -60,8 +60,8 @@ export default function LoginPage() {
     // 5. Redirección según el rol
     if (rol === "refugio") {
       router.push("/dashboard/refugio");
-    } else {
-      router.push("/perros");
+    } else if (rol === "adoptante"){
+      router.push("/dashboard/adoptante");
     }
   };
 

@@ -28,10 +28,17 @@ export default function RefugioDashboardPage() {
         if (petData) setMascotas(petData);
 
         // Consultar solicitudes de adopción
-        const { data: solData } = await supabase
-          .from("solicitudes")
-          .select("*, mascotas(*)")
-          .eq("refugio_id", user.id);
+        const { data: solData, error: solError } = await supabase 
+  .from("solicitudes_adopcion") 
+  .select("*, mascotas(*)") 
+  .eq("refugio_id", user.id);
+
+console.log("USUARIO REFUGIO:", user.id);
+console.log(
+  "SOLICITUDES DEL REFUGIO:",
+  JSON.stringify(solData, null, 2)
+);
+console.log("ERROR SOLICITUDES:", solError);
 
         if (solData) setSolicitudes(solData);
       }
@@ -116,7 +123,7 @@ export default function RefugioDashboardPage() {
       <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6">
         <h2 className="text-sm font-bold text-stone-200 tracking-wider uppercase mb-4">
           Solicitudes de Adopción Recibidas ({solicitudes.length})
-        </h2>
+        </h2>   
 
         {solicitudes.length === 0 ? (
           <p className="text-xs text-stone-500 text-center py-6">
@@ -124,20 +131,32 @@ export default function RefugioDashboardPage() {
           </p>
         ) : (
           <div className="space-y-3">
-            {solicitudes.map((sol) => (
-              <div
-                key={sol.id}
-                className="bg-stone-950 p-4 rounded-xl border border-stone-800 flex justify-between items-center"
-              >
-                <div>
-                  <p className="text-sm font-bold text-white">
-                    Solicitud para: {sol.mascotas?.nombre || "Mascota"}
-                  </p>
-                  <p className="text-xs text-stone-400">
-                    Estado: {sol.estado || "Pendiente"}
-                  </p>
-                </div>
-              </div>
+           {solicitudes.map((sol) => ( 
+  <div 
+    key={sol.id} 
+    className="bg-stone-950 p-4 rounded-xl border border-stone-800 flex justify-between items-center gap-4" 
+  > 
+    <div className="flex-1"> 
+      <p className="text-sm font-bold text-white"> 
+        Solicitud para: {sol.mascotas?.nombre || "Mascota"} 
+      </p> 
+
+      <p className="text-xs text-stone-400 mt-1"> 
+        Adoptante: {sol.nombres_apellidos || "Sin nombre"} 
+      </p>
+
+      <p className="text-xs text-stone-400"> 
+        Estado: {sol.estado || "Pendiente"} 
+      </p> 
+    </div>
+
+    <Link
+      href="/dashboard/refugio/solicitudes"
+      className="bg-amber-400 hover:bg-amber-500 text-stone-950 px-4 py-2 rounded-xl text-xs font-bold transition"
+    >
+      Ver solicitud
+    </Link>
+  </div> 
             ))}
           </div>
         )}

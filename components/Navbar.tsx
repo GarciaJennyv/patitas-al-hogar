@@ -34,7 +34,7 @@ export default function Navbar() {
           className="flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 text-gray-900 font-semibold px-3 py-1.5 rounded-lg border border-amber-200 transition text-xs"
         >
           <span>🐾</span>
-          <span>Panel Admin</span>
+          <span>Admin</span>
         </Link>
 
         {/* Botón Iniciar Sesión General */}
