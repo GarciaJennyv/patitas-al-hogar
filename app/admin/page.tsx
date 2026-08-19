@@ -186,16 +186,18 @@ export default function AdminDashboardPage() {
     // ----------------------------------------------------------
     // 5. CARGAR MASCOTAS
     // ----------------------------------------------------------
+const { data: mascotasData, error: mascotasError } = await supabase
+  .from("mascotas")
+  .select("*")
+  .order("created_at", { ascending: false });
 
-    const { data: mascotasData } = await supabase
-      .from("mascotas")
-      .select("*, perfiles(nombre)")
-      .order("created_at", { ascending: false });
+console.log("MASCOTAS:", mascotasData);
+console.log("ERROR MASCOTAS:", mascotasError);
 
-    if (mascotasData) {
-      setMascotas(mascotasData);
-    }
-
+if (mascotasData) {
+  setMascotas(mascotasData);
+}
+    
     // ----------------------------------------------------------
     // 6. CARGAR SOLICITUDES DE ADOPCIÓN
     // ----------------------------------------------------------

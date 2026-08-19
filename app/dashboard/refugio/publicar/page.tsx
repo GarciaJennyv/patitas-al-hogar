@@ -105,7 +105,7 @@ export default function NuevaMascotaPage() {
         descripcion: formData.descripcion,
         requisitos_especiales: formData.requisitosEspeciales,
         estado_adopcion: formData.estadoAdopcion,
-        estado: formData.estadoAdopcion.toLowerCase(),
+        estado: "pendiente",
         fecha_publicacion: new Date().toISOString(),
         foto_principal: formData.fotoPrincipal,
         imagen_url: formData.fotoPrincipal,
