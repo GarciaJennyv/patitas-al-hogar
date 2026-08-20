@@ -87,8 +87,8 @@ export default function RefugioSolicitudesPage() {
   const cambiarEstado = async (
     solicitud: any,
     nuevoEstado:
-      | "aprobada"
-      | "rechazada"
+      | "aprobado"
+      | "rechazado"
   ) => {
 
     setActualizando(true);
@@ -122,7 +122,7 @@ export default function RefugioSolicitudesPage() {
     // --------------------------------------------------------
 
     if (
-      nuevoEstado === "aprobada" &&
+      nuevoEstado === "aprobado" &&
       solicitud.mascota_id
     ) {
 
@@ -130,7 +130,7 @@ export default function RefugioSolicitudesPage() {
         await supabase
           .from("mascotas")
           .update({
-            estado_adopcion: "Adoptada",
+            estado_adopcion: "Adoptado",
           })
           .eq(
             "id",
@@ -155,7 +155,7 @@ export default function RefugioSolicitudesPage() {
     // --------------------------------------------------------
 
     if (
-      nuevoEstado === "rechazada" &&
+      nuevoEstado === "rechazado" &&
       solicitud.mascota_id
     ) {
 
@@ -182,7 +182,7 @@ export default function RefugioSolicitudesPage() {
     setActualizando(false);
 
     alert(
-      nuevoEstado === "aprobada"
+      nuevoEstado === "aprobado"
         ? "¡Adopción aprobada correctamente!"
         : "Solicitud rechazada correctamente."
     );
@@ -663,7 +663,7 @@ export default function RefugioSolicitudesPage() {
                   onClick={() =>
                     cambiarEstado(
                       solicitudSeleccionada,
-                      "rechazada"
+                      "rechazado"
                     )
                   }
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 disabled:opacity-50"
@@ -680,7 +680,7 @@ export default function RefugioSolicitudesPage() {
                   onClick={() =>
                     cambiarEstado(
                       solicitudSeleccionada,
-                      "aprobada"
+                      "aprobado"
                     )
                   }
                   className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 disabled:opacity-50"

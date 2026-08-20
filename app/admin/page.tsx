@@ -172,17 +172,34 @@ export default function AdminDashboardPage() {
     // ----------------------------------------------------------
     // 4. CARGAR REFUGIOS
     // ----------------------------------------------------------
+const {
+  data: refugiosData,
+  error: refugiosError,
+} = await supabase
+  .from("perfiles")
+  .select("*")
+  .eq("rol", "refugio")
+  .order("created_at", { ascending: false });
 
-    const { data: refugiosData } = await supabase
-      .from("perfiles")
-      .select("*")
-      .eq("rol", "refugio")
-      .order("created_at", { ascending: false });
+console.log("REFUGIOS:", refugiosData);
+console.log("ERROR REFUGIOS:", refugiosError);
 
-    if (refugiosData) {
-      setRefugios(refugiosData);
-    }
+if (refugiosError) {
+  console.error("ERROR CARGANDO REFUGIOS:", refugiosError.message);
+}
 
+if (refugiosData) {
+  setRefugios(refugiosData);
+}
+    const {
+  data: todosPerfiles,
+  error: perfilesError,
+} = await supabase
+  .from("perfiles")
+  .select("id, nombre, rol, refugio_verificado, created_at");
+
+console.log("TODOS LOS PERFILES:", todosPerfiles);
+console.log("ERROR TODOS LOS PERFILES:", perfilesError);
     // ----------------------------------------------------------
     // 5. CARGAR MASCOTAS
     // ----------------------------------------------------------

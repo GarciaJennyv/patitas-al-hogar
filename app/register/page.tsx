@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PawPrint } from "lucide-react";
-import { createClient } from "@/utils/supabase/client"; // Cliente navegador de Supabase
+import { createClient } from "@/utils/supabase/client";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -20,6 +20,7 @@ export default function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+
     setLoading(true);
     setError("");
     setSuccess(false);
@@ -27,7 +28,6 @@ export default function RegisterPage() {
     try {
       const supabase = createClient();
 
-      // Registro directo con Supabase Auth
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -45,9 +45,14 @@ export default function RegisterPage() {
         return;
       }
 
+      if (!data.user) {
+        setError("No se pudo crear el usuario.");
+        setLoading(false);
+        return;
+      }
+
       setSuccess(true);
 
-      // Redirección directa al panel correspondiente
       setTimeout(() => {
         if (rol === "refugio") {
           router.push("/dashboard/refugio");
@@ -56,9 +61,11 @@ export default function RegisterPage() {
         }
       }, 1200);
 
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error inesperado:", err);
-      setError("Ocurrió un error inesperado al conectar con el servicio");
+      setError(
+        "Ocurrió un error inesperado al conectar con el servicio."
+      );
     } finally {
       setLoading(false);
     }
@@ -67,10 +74,12 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-stone-900 flex items-center justify-center p-6 text-white font-sans">
       <div className="max-w-md w-full bg-stone-800 p-8 rounded-3xl shadow-2xl border border-stone-700">
-        
+
         <div className="flex items-center justify-center gap-2 mb-6">
           <PawPrint className="w-8 h-8 text-[#f4c430]" />
-          <h1 className="text-2xl font-extrabold">Crear Cuenta</h1>
+          <h1 className="text-2xl font-extrabold">
+            Crear Cuenta
+          </h1>
         </div>
 
         {error && (
@@ -86,8 +95,12 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleRegister} className="space-y-4">
+
           <div>
-            <label className="block text-sm font-medium mb-1">Nombre completo</label>
+            <label className="block text-sm font-medium mb-1">
+              Nombre completo
+            </label>
+
             <input
               type="text"
               required
@@ -99,7 +112,10 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Correo electrónico</label>
+            <label className="block text-sm font-medium mb-1">
+              Correo electrónico
+            </label>
+
             <input
               type="email"
               required
@@ -111,7 +127,10 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Contraseña</label>
+            <label className="block text-sm font-medium mb-1">
+              Contraseña
+            </label>
+
             <input
               type="password"
               required
@@ -124,14 +143,26 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Selecciona tu rol</label>
+            <label className="block text-sm font-medium mb-1">
+              Selecciona tu rol
+            </label>
+
             <select
               value={rol}
-              onChange={(e) => setRol(e.target.value as "adoptante" | "refugio")}
+              onChange={(e) =>
+                setRol(
+                  e.target.value as "adoptante" | "refugio"
+                )
+              }
               className="w-full bg-stone-900 border border-stone-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f4c430] cursor-pointer"
             >
-              <option value="adoptante">Adoptante (Busca adoptar)</option>
-              <option value="refugio">Refugio (Publica mascotas)</option>
+              <option value="adoptante">
+                Adoptante (Busca adoptar)
+              </option>
+
+              <option value="refugio">
+                Refugio (Publica mascotas)
+              </option>
             </select>
           </div>
 
@@ -140,16 +171,26 @@ export default function RegisterPage() {
             disabled={loading || success}
             className="w-full bg-[#f4c430] hover:bg-[#e0b020] text-stone-900 font-bold py-3 rounded-xl transition shadow-lg mt-4 cursor-pointer disabled:opacity-50"
           >
-            {loading ? "Registrando..." : success ? "¡Registrado!" : "Registrarse"}
+            {loading
+              ? "Registrando..."
+              : success
+              ? "¡Registrado!"
+              : "Registrarse"}
           </button>
+
         </form>
 
         <p className="text-center text-stone-400 text-sm mt-6">
           ¿Ya tienes una cuenta?{" "}
-          <Link href="/login" className="text-[#f4c430] hover:underline font-medium">
+
+          <Link
+            href="/login"
+            className="text-[#f4c430] hover:underline font-medium"
+          >
             Inicia sesión aquí
           </Link>
         </p>
+
       </div>
     </div>
   );
