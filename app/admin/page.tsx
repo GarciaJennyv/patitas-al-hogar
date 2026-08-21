@@ -94,7 +94,9 @@ export default function AdminDashboardPage() {
   >("resumen");
 
   const [refugios, setRefugios] = useState<Refugio[]>([]);
+  
   const [mascotas, setMascotas] = useState<Mascota[]>([]);
+  
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
 
@@ -161,7 +163,7 @@ export default function AdminDashboardPage() {
     // ----------------------------------------------------------
 
     const { data: usuariosData } = await supabase
-      .from("perfiles")
+      .from("profiles")
       .select("*")
       .order("created_at", { ascending: false });
 
@@ -176,7 +178,7 @@ const {
   data: refugiosData,
   error: refugiosError,
 } = await supabase
-  .from("perfiles")
+  .from("profiles")
   .select("*")
   .eq("rol", "refugio")
   .order("created_at", { ascending: false });
@@ -190,31 +192,34 @@ if (refugiosError) {
 
 if (refugiosData) {
   setRefugios(refugiosData);
+
 }
     const {
   data: todosPerfiles,
   error: perfilesError,
 } = await supabase
   .from("perfiles")
-  .select("id, nombre, rol, refugio_verificado, created_at");
+  .select("*");
 
 console.log("TODOS LOS PERFILES:", todosPerfiles);
 console.log("ERROR TODOS LOS PERFILES:", perfilesError);
+
     // ----------------------------------------------------------
-    // 5. CARGAR MASCOTAS
+   // 5. CARGAR MASCOTAS
+
     // ----------------------------------------------------------
 const { data: mascotasData, error: mascotasError } = await supabase
-  .from("mascotas")
-  .select("*")
-  .order("created_at", { ascending: false });
+      .from('mascotas')
+      .select('*'); 
 
-console.log("MASCOTAS:", mascotasData);
-console.log("ERROR MASCOTAS:", mascotasError);
+    console.log("MASCOTAS:", mascotasData);
+    console.log("ERROR MASCOTAS:", mascotasError);
 
-if (mascotasData) {
-  setMascotas(mascotasData);
-}
-    
+    if (mascotasData) {
+      setMascotas(mascotasData as any);
+      //setMascotasFiltradas(mascotasData as any);
+    }
+
     // ----------------------------------------------------------
     // 6. CARGAR SOLICITUDES DE ADOPCIÓN
     // ----------------------------------------------------------
@@ -401,23 +406,17 @@ if (mascotasData) {
   // FILTROS
   // ============================================================
 
-  const usuariosFiltrados = usuarios.filter((usuario) =>
-    usuario.nombre
-      ?.toLowerCase()
-      .includes(busquedaUsuario.toLowerCase())
-  );
+  const usuariosFiltrados = (usuarios || []).filter((usuario) =>
+  usuario.nombre?.toLowerCase().includes(busquedaUsuario.toLowerCase())
+);
 
-  const refugiosFiltrados = refugios.filter((refugio) =>
-    refugio.nombre
-      ?.toLowerCase()
-      .includes(busquedaRefugio.toLowerCase())
-  );
+const refugiosFiltrados = (refugios || []).filter((refugio) =>
+  refugio.nombre?.toLowerCase().includes(busquedaRefugio.toLowerCase())
+);
 
-  const mascotasFiltradas = mascotas.filter((mascota) =>
-    mascota.nombre
-      ?.toLowerCase()
-      .includes(busquedaMascota.toLowerCase())
-  );
+const mascotasFiltradas = (mascotas || []).filter((mascota) =>
+  mascota.nombre?.toLowerCase().includes(busquedaMascota.toLowerCase())
+);
 
   // ============================================================
   // LOADING
@@ -1185,7 +1184,7 @@ if (mascotasData) {
 
             <div className="grid gap-4">
 
-              {refugiosFiltrados.map((refugio) => (
+              {refugios.map((refugio) => (
 
                 <div
                   key={refugio.id}

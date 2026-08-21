@@ -10,7 +10,8 @@ export default function RefugioDashboardPage() {
   const [solicitudes, setSolicitudes] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
 
-  useEffect(() => {
+  
+    useEffect(() => {
     async function cargarDatos() {
       setCargando(true);
 
@@ -28,17 +29,17 @@ export default function RefugioDashboardPage() {
         if (petData) setMascotas(petData);
 
         // Consultar solicitudes de adopción
-        const { data: solData, error: solError } = await supabase 
-  .from("solicitudes_adopcion") 
-  .select("*, mascotas(*)") 
-  .eq("refugio_id", user.id);
+        const { data: solData, error: solError } = await supabase
+          .from("solicitudes_adopcion")
+          .select("*, mascotas(*)")
+          .eq("refugio_id", user.id);
 
-console.log("USUARIO REFUGIO:", user.id);
-console.log(
-  "SOLICITUDES DEL REFUGIO:",
-  JSON.stringify(solData, null, 2)
-);
-console.log("ERROR SOLICITUDES:", solError);
+        console.log("USUARIO REFUGIO:", user.id);
+        console.log(
+          "SOLICITUDES DEL REFUGIO:",
+          JSON.stringify(solData, null, 2)
+        );
+        console.log("ERROR SOLICITUDES:", solError);
 
         if (solData) setSolicitudes(solData);
       }
@@ -48,6 +49,35 @@ console.log("ERROR SOLICITUDES:", solError);
 
     cargarDatos();
   }, []);
+
+  // 👇 AQUÍ PEGAS LA FUNCIÓN
+  const marcarComoAdoptado = async (mascotaId: string) => {
+    const confirmar = window.confirm(
+      "¿Estás seguro de que esta mascota ya fue adoptada?"
+    );
+
+    if (!confirmar) return;
+
+    const { error } = await supabase
+      .from("mascotas")
+      .update({ estado: "adoptado" })
+      .eq("id", mascotaId);
+
+    if (error) {
+      console.error("Error al actualizar mascota:", error);
+      alert("No se pudo actualizar el estado de la mascota.");
+      return;
+    }
+
+    setMascotas((mascotasActuales) =>
+      mascotasActuales.map((mascota) =>
+        mascota.id === mascotaId
+          ? { ...mascota, estado: "adoptado" }
+          : mascota
+      )
+    );
+  };
+
 
   if (cargando) {
     return (
