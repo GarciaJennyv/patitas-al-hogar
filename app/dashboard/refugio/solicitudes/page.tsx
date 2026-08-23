@@ -92,6 +92,42 @@ export default function RefugioSolicitudesPage() {
   ) => {
 
     setActualizando(true);
+    if (
+      nuevoEstado === "aprobado" &&
+      solicitud.mascota_id
+    ) {
+      // 1. La mascota pasa a Adoptado
+      const { error: mascotaError } =
+        await supabase
+          .from("mascotas")
+          .update({
+            estado_adopcion: "Adoptado", // Verifica si en tu BD dice "Adoptado" con mayúscula o "adoptado" con minúscula
+          })
+          .eq(
+            "id",
+            solicitud.mascota_id
+          );
+
+      if (mascotaError) {
+        alert(
+          "La solicitud fue aprobada, pero ocurrió un error actualizando la mascota: " +
+            mascotaError.message
+        );
+        setActualizando(false);
+        return;
+      }
+
+      // 2. MAGIA: Rechazar automáticamente a todos los demás postulantes para Koda
+      const { error: rechazoError } = await supabase
+        .from("solicitudes_adopcion")
+        .update({ estado: "rechazado" })
+        .eq("mascota_id", solicitud.mascota_id) // Busca las solicitudes de Koda...
+        .neq("id", solicitud.id); // ...pero NO toques la solicitud que acabamos de aprobar
+
+      if (rechazoError) {
+        console.error("Error rechazando otras solicitudes:", rechazoError);
+      }
+    }
 
     // --------------------------------------------------------
     // ACTUALIZAR SOLICITUD

@@ -18,9 +18,11 @@ import {
   FileText,
   BarChart3,
   Search,
-  UserCheck,
-  UserX,
   RefreshCw,
+  AlertTriangle,
+  UserCheck, // <- Agregar este
+  Phone,     // <- Agregar este
+  MapPin,    // <- Agregar este
 } from "lucide-react";
 
 interface Refugio {
@@ -28,6 +30,11 @@ interface Refugio {
   nombre: string;
   ruc_o_identificacion?: string;
   refugio_verificado: boolean;
+  responsable?: string;
+  telefono?: string;
+  direccion?: string;
+  ciudad?: string;
+  estado: string;
   created_at: string;
 }
 
@@ -47,9 +54,6 @@ interface Mascota {
   imagen: string;
   estado: "pendiente" | "aprobado" | "rechazado";
   user_id: string;
-  perfiles?: {
-    nombre: string;
-  };
 }
 
 interface Solicitud {
@@ -59,18 +63,9 @@ interface Solicitud {
   refugio_id?: string;
   estado: "pendiente" | "aprobada" | "rechazada" | "finalizada";
   created_at: string;
-
-  mascotas?: {
-    nombre: string;
-  };
-
-  adoptante?: {
-    nombre: string;
-  };
-
-  refugio?: {
-    nombre: string;
-  };
+  mascotas?: { nombre: string };
+  adoptante?: { nombre: string };
+  refugio?: { nombre: string };
 }
 
 interface Estadisticas {
@@ -82,21 +77,13 @@ interface Estadisticas {
   mascotasPendientes: number;
   refugiosPendientes: number;
 }
-
 export default function AdminDashboardPage() {
   const [tab, setTab] = useState<
-    "resumen" |
-    "usuarios" |
-    "refugios" |
-    "mascotas" |
-    "adopciones" |
-    "reportes"
+    "resumen" | "usuarios" | "refugios" | "mascotas" | "adopciones" | "reportes"
   >("resumen");
 
   const [refugios, setRefugios] = useState<Refugio[]>([]);
-  
   const [mascotas, setMascotas] = useState<Mascota[]>([]);
-  
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
 
@@ -115,12 +102,7 @@ export default function AdminDashboardPage() {
   const [busquedaMascota, setBusquedaMascota] = useState("");
 
   const [loading, setLoading] = useState(true);
-
   const router = useRouter();
-
-  // ============================================================
-  // CARGAR TODOS LOS DATOS
-  // ============================================================
 
   useEffect(() => {
     cargarDatos();
@@ -128,10 +110,6 @@ export default function AdminDashboardPage() {
 
   const cargarDatos = async () => {
     setLoading(true);
-
-    // ----------------------------------------------------------
-    // 1. VERIFICAR SESIÓN
-    // ----------------------------------------------------------
 
     const {
       data: { user },
@@ -142,12 +120,9 @@ export default function AdminDashboardPage() {
       return;
     }
 
-    // ----------------------------------------------------------
-    // 2. VERIFICAR ROL ADMIN
-    // ----------------------------------------------------------
-
+    // Validar Rol de Administrador en 'profiles'
     const { data: perfil } = await supabase
-      .from("perfiles")
+      .from("profiles")
       .select("rol")
       .eq("id", user.id)
       .single();
@@ -158,163 +133,68 @@ export default function AdminDashboardPage() {
       return;
     }
 
-    // ----------------------------------------------------------
-    // 3. CARGAR USUARIOS
-    // ----------------------------------------------------------
-
+    // 1. Cargar Usuarios desde 'profiles'
     const { data: usuariosData } = await supabase
       .from("profiles")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (usuariosData) {
-      setUsuarios(usuariosData);
-    }
+    if (usuariosData) setUsuarios(usuariosData);
 
-    // ----------------------------------------------------------
-    // 4. CARGAR REFUGIOS
-    // ----------------------------------------------------------
-const {
-  data: refugiosData,
-  error: refugiosError,
-} = await supabase
+    // 2. Cargar Refugios directamente desde la tabla 'refugios'
+    const { data: refugiosData, error: refugiosErr } = await supabase
   .from("profiles")
   .select("*")
-  .eq("rol", "refugio")
-  .order("created_at", { ascending: false });
+  .eq("rol", "refugio");
 
-console.log("REFUGIOS:", refugiosData);
-console.log("ERROR REFUGIOS:", refugiosError);
+if (refugiosErr) console.error("Error refugios:", refugiosErr.message);
+if (refugiosData) setRefugios(refugiosData);
 
-if (refugiosError) {
-  console.error("ERROR CARGANDO REFUGIOS:", refugiosError.message);
-}
+    // 3. Cargar Mascotas desde 'mascotas'
+    const { data: mascotasData } = await supabase.from("mascotas").select("*");
+    if (mascotasData) setMascotas(mascotasData as Mascota[]);
 
-if (refugiosData) {
-  setRefugios(refugiosData);
-
-}
-    const {
-  data: todosPerfiles,
-  error: perfilesError,
-} = await supabase
-  .from("perfiles")
-  .select("*");
-
-console.log("TODOS LOS PERFILES:", todosPerfiles);
-console.log("ERROR TODOS LOS PERFILES:", perfilesError);
-
-    // ----------------------------------------------------------
-   // 5. CARGAR MASCOTAS
-
-    // ----------------------------------------------------------
-const { data: mascotasData, error: mascotasError } = await supabase
-      .from('mascotas')
-      .select('*'); 
-
-    console.log("MASCOTAS:", mascotasData);
-    console.log("ERROR MASCOTAS:", mascotasError);
-
-    if (mascotasData) {
-      setMascotas(mascotasData as any);
-      //setMascotasFiltradas(mascotasData as any);
-    }
-
-    // ----------------------------------------------------------
-    // 6. CARGAR SOLICITUDES DE ADOPCIÓN
-    // ----------------------------------------------------------
-
+    // 4. Cargar Solicitudes
     const { data: solicitudesData } = await supabase
       .from("solicitudes_adopcion")
       .select(`
         *,
         mascotas(nombre),
-        adoptante:perfiles!solicitudes_adopcion_adoptante_id_fkey(nombre),
-        refugio:perfiles!solicitudes_adopcion_refugio_id_fkey(nombre)
+        adoptante:profiles!solicitudes_adopcion_adoptante_id_fkey(nombre),
+        refugio:profiles!solicitudes_adopcion_refugio_id_fkey(nombre)
       `)
       .order("created_at", { ascending: false });
 
-    if (solicitudesData) {
-      setSolicitudes(solicitudesData);
-    }
+    if (solicitudesData) setSolicitudes(solicitudesData as Solicitud[]);
 
-    // ----------------------------------------------------------
-    // 7. CALCULAR ESTADÍSTICAS
-    // ----------------------------------------------------------
-
-    const totalUsuarios = usuariosData?.length || 0;
-    const totalRefugios = refugiosData?.length || 0;
-    const totalMascotas = mascotasData?.length || 0;
-
-    const refugiosPendientes =
-      refugiosData?.filter(
-        (refugio) => !refugio.refugio_verificado
-      ).length || 0;
-
-    const mascotasPendientes =
-      mascotasData?.filter(
-        (mascota) => mascota.estado === "pendiente"
-      ).length || 0;
-
-    const solicitudesPendientes =
-      solicitudesData?.filter(
-        (solicitud) => solicitud.estado === "pendiente"
-      ).length || 0;
-
-    const adopciones =
-      solicitudesData?.filter(
-        (solicitud) =>
-          solicitud.estado === "aprobada" ||
-          solicitud.estado === "finalizada"
-      ).length || 0;
-
+    // Calcular Métricas basadas en la columna 'estado'
     setEstadisticas({
-      usuarios: totalUsuarios,
-      refugios: totalRefugios,
-      mascotas: totalMascotas,
-      adopciones,
-      solicitudesPendientes,
-      mascotasPendientes,
-      refugiosPendientes,
+      usuarios: usuariosData?.length || 0,
+      refugios: refugiosData?.length || 0,
+      mascotas: mascotasData?.length || 0,
+      adopciones:
+        solicitudesData?.filter(
+          (s) => s.estado === "aprobada" || s.estado === "finalizada"
+        ).length || 0,
+      solicitudesPendientes:
+        solicitudesData?.filter((s) => s.estado === "pendiente").length || 0,
+      mascotasPendientes:
+        mascotasData?.filter((m) => m.estado === "pendiente").length || 0,
+      refugiosPendientes:
+        refugiosData?.filter((r) => r.estado === "pendiente").length || 0,
     });
 
     setLoading(false);
   };
 
-  // ============================================================
-  // VERIFICAR / REVOCAR REFUGIO
-  // ============================================================
-
-  const cambiarVerificacionRefugio = async (
-    id: string,
-    nuevoEstado: boolean
-  ) => {
+  const cambiarEstadoRefugio = async (id: string, nuevoEstado: string) => {
     const { error } = await supabase
-      .from("perfiles")
-      .update({
-        refugio_verificado: nuevoEstado,
-      })
+      .from("refugios")
+      .update({ estado: nuevoEstado })
       .eq("id", id);
 
-    if (!error) {
-      setRefugios((prev) =>
-        prev.map((r) =>
-          r.id === id
-            ? {
-                ...r,
-                refugio_verificado: nuevoEstado,
-              }
-            : r
-        )
-      );
-
-      cargarDatos();
-    }
+    if (!error) cargarDatos();
   };
-
-  // ============================================================
-  // APROBAR / RECHAZAR MASCOTA
-  // ============================================================
 
   const cambiarEstadoMascota = async (
     id: string,
@@ -322,1591 +202,380 @@ const { data: mascotasData, error: mascotasError } = await supabase
   ) => {
     const { error } = await supabase
       .from("mascotas")
-      .update({
-        estado: nuevoEstado,
-      })
+      .update({ estado: nuevoEstado })
       .eq("id", id);
 
-    if (!error) {
-      setMascotas((prev) =>
-        prev.map((m) =>
-          m.id === id
-            ? {
-                ...m,
-                estado: nuevoEstado,
-              }
-            : m
-        )
-      );
-
-      cargarDatos();
-    }
+    if (!error) cargarDatos();
   };
-
-  // ============================================================
-  // CAMBIAR ESTADO DE USUARIO
-  // ============================================================
-
-  const cambiarEstadoUsuario = async (
-    id: string,
-    nuevoEstado: string
-  ) => {
-    // Esta función depende de que tengas un campo
-    // "estado" en tu tabla perfiles.
-
-    const { error } = await supabase
-      .from("perfiles")
-      .update({
-        estado: nuevoEstado,
-      })
-      .eq("id", id);
-
-    if (!error) {
-      cargarDatos();
-    }
-  };
-
-  // ============================================================
-  // CAMBIAR ESTADO DE SOLICITUD
-  // ============================================================
-
-  const cambiarEstadoSolicitud = async (
-    id: string,
-    nuevoEstado:
-      | "pendiente"
-      | "aprobada"
-      | "rechazada"
-      | "finalizada"
-  ) => {
-    const { error } = await supabase
-      .from("solicitudes_adopcion")
-      .update({
-        estado: nuevoEstado,
-      })
-      .eq("id", id);
-
-    if (!error) {
-      cargarDatos();
-    }
-  };
-
-  // ============================================================
-  // CERRAR SESIÓN
-  // ============================================================
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-
     router.push("/");
-
     router.refresh();
   };
 
-  // ============================================================
-  // FILTROS
-  // ============================================================
+  const usuariosFiltrados = usuarios.filter((u) =>
+    u.nombre?.toLowerCase().includes(busquedaUsuario.toLowerCase())
+  );
 
-  const usuariosFiltrados = (usuarios || []).filter((usuario) =>
-  usuario.nombre?.toLowerCase().includes(busquedaUsuario.toLowerCase())
-);
+  const refugiosFiltrados = refugios.filter((r) =>
+    r.nombre?.toLowerCase().includes(busquedaRefugio.toLowerCase())
+  );
 
-const refugiosFiltrados = (refugios || []).filter((refugio) =>
-  refugio.nombre?.toLowerCase().includes(busquedaRefugio.toLowerCase())
-);
-
-const mascotasFiltradas = (mascotas || []).filter((mascota) =>
-  mascota.nombre?.toLowerCase().includes(busquedaMascota.toLowerCase())
-);
-
-  // ============================================================
-  // LOADING
-  // ============================================================
+  const mascotasFiltradas = mascotas.filter((m) =>
+    m.nombre?.toLowerCase().includes(busquedaMascota.toLowerCase())
+  );
 
   if (loading) {
     return (
       <main className="min-h-screen bg-stone-950 text-white flex items-center justify-center">
         <div className="text-center">
           <ShieldCheck className="w-10 h-10 text-[#f4c430] mx-auto mb-4 animate-pulse" />
-
-          <p className="text-stone-400 animate-pulse text-sm">
-            Cargando Panel de Administración...
-          </p>
+          <p className="text-stone-400 text-sm">Cargando Panel de Administración...</p>
         </div>
       </main>
     );
   }
 
-  // ============================================================
-  // INTERFAZ
-  // ============================================================
-
   return (
     <main className="min-h-screen bg-stone-950 text-stone-100 p-6 md:p-10">
-
       <div className="max-w-7xl mx-auto space-y-8">
-
-        {/* ======================================================
-            ENCABEZADO
-        ====================================================== */}
-
+        {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-stone-800 pb-6">
-
           <div className="flex items-center gap-3">
-
             <div className="bg-[#f4c430]/10 border border-[#f4c430]/30 p-3 rounded-2xl text-[#f4c430]">
-
               <ShieldCheck className="w-8 h-8" />
-
             </div>
-
             <div>
-
-              <h1 className="text-2xl font-black tracking-tight text-white">
-
-                Panel del Administrador General
-
-              </h1>
-
-              <p className="text-xs text-stone-400">
-
-                Gestión y supervisión de Patitas al Hogar
-
-              </p>
-
+              <h1 className="text-2xl font-black text-white">Panel del Administrador</h1>
+              <p className="text-xs text-stone-400">Gestión y supervisión general de Patitas al Hogar</p>
             </div>
-
           </div>
-
           <div className="flex gap-2">
-
             <button
               onClick={cargarDatos}
-              className="flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-stone-300 px-4 py-2 rounded-xl border border-stone-800 text-xs font-semibold transition cursor-pointer"
+              className="flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-stone-300 px-4 py-2 rounded-xl border border-stone-800 text-xs font-semibold cursor-pointer"
             >
-
-              <RefreshCw className="w-4 h-4" />
-
-              Actualizar
-
+              <RefreshCw className="w-4 h-4" /> Actualizar
             </button>
-
             <button
               onClick={handleSignOut}
-              className="flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-stone-300 px-4 py-2 rounded-xl border border-stone-800 text-xs font-semibold transition cursor-pointer"
+              className="flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-stone-300 px-4 py-2 rounded-xl border border-stone-800 text-xs font-semibold cursor-pointer"
             >
-
-              <LogOut className="w-4 h-4" />
-
-              Cerrar Sesión
-
+              <LogOut className="w-4 h-4" /> Cerrar Sesión
             </button>
-
           </div>
-
         </div>
 
-
-        {/* ======================================================
-            TARJETAS DE ESTADÍSTICAS
-        ====================================================== */}
-
+        {/* METRICAS PRINCIPALES */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
-          {/* USUARIOS */}
-
-          <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-
-                <p className="text-xs text-stone-400">
-                  Usuarios
-                </p>
-
-                <p className="text-3xl font-black text-white">
-                  {estadisticas.usuarios}
-                </p>
-
-              </div>
-
-              <Users className="w-8 h-8 text-blue-400" />
-
+          <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5 flex justify-between items-center">
+            <div>
+              <p className="text-xs text-stone-400">Total Usuarios</p>
+              <p className="text-3xl font-black text-white">{estadisticas.usuarios}</p>
             </div>
-
+            <Users className="w-8 h-8 text-blue-400" />
           </div>
-
-
-          {/* REFUGIOS */}
-
-          <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-
-                <p className="text-xs text-stone-400">
-                  Refugios
-                </p>
-
-                <p className="text-3xl font-black text-white">
-                  {estadisticas.refugios}
-                </p>
-
-              </div>
-
-              <Building2 className="w-8 h-8 text-[#f4c430]" />
-
+          <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5 flex justify-between items-center">
+            <div>
+              <p className="text-xs text-stone-400">Refugios Registrados</p>
+              <p className="text-3xl font-black text-white">{estadisticas.refugios}</p>
             </div>
-
+            <Building2 className="w-8 h-8 text-[#f4c430]" />
           </div>
-
-
-          {/* MASCOTAS */}
-
-          <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-
-                <p className="text-xs text-stone-400">
-                  Mascotas
-                </p>
-
-                <p className="text-3xl font-black text-white">
-                  {estadisticas.mascotas}
-                </p>
-
-              </div>
-
-              <Dog className="w-8 h-8 text-emerald-400" />
-
+          <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5 flex justify-between items-center">
+            <div>
+              <p className="text-xs text-stone-400">Mascotas Publicadas</p>
+              <p className="text-3xl font-black text-white">{estadisticas.mascotas}</p>
             </div>
-
+            <Dog className="w-8 h-8 text-emerald-400" />
           </div>
-
-
-          {/* ADOPCIONES */}
-
-          <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-
-                <p className="text-xs text-stone-400">
-                  Adopciones
-                </p>
-
-                <p className="text-3xl font-black text-white">
-                  {estadisticas.adopciones}
-                </p>
-
-              </div>
-
-              <Heart className="w-8 h-8 text-red-400" />
-
+          <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5 flex justify-between items-center">
+            <div>
+              <p className="text-xs text-stone-400">Adopciones Concluidas</p>
+              <p className="text-3xl font-black text-white">{estadisticas.adopciones}</p>
             </div>
-
+            <Heart className="w-8 h-8 text-red-400" />
           </div>
-
         </div>
 
-
-        {/* ======================================================
-            ALERTAS
-        ====================================================== */}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-          <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4">
-
-            <div className="flex items-center gap-3">
-
-              <Clock className="w-5 h-5 text-amber-400" />
-
-              <div>
-
-                <p className="text-xs text-amber-300">
-                  Refugios pendientes
-                </p>
-
-                <p className="text-xl font-black text-white">
-                  {estadisticas.refugiosPendientes}
-                </p>
-
-              </div>
-
-            </div>
-
-          </div>
-
-
-          <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4">
-
-            <div className="flex items-center gap-3">
-
-              <Dog className="w-5 h-5 text-amber-400" />
-
-              <div>
-
-                <p className="text-xs text-amber-300">
-                  Mascotas pendientes
-                </p>
-
-                <p className="text-xl font-black text-white">
-                  {estadisticas.mascotasPendientes}
-                </p>
-
-              </div>
-
-            </div>
-
-          </div>
-
-
-          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4">
-
-            <div className="flex items-center gap-3">
-
-              <Heart className="w-5 h-5 text-red-400" />
-
-              <div>
-
-                <p className="text-xs text-red-300">
-                  Solicitudes pendientes
-                </p>
-
-                <p className="text-xl font-black text-white">
-                  {estadisticas.solicitudesPendientes}
-                </p>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-
-        {/* ======================================================
-            MENÚ
-        ====================================================== */}
-
+        {/* NAVEGACION PESTAÑAS */}
         <div className="flex gap-2 overflow-x-auto border-b border-stone-800 pb-1">
-
-          <button
-            onClick={() => setTab("resumen")}
-            className={`flex items-center gap-2 whitespace-nowrap pb-3 px-3 font-bold text-sm border-b-2 transition cursor-pointer ${
-              tab === "resumen"
-                ? "border-[#f4c430] text-[#f4c430]"
-                : "border-transparent text-stone-400 hover:text-stone-200"
-            }`}
-          >
-
-            <BarChart3 className="w-4 h-4" />
-
-            Resumen
-
-          </button>
-
-
-          <button
-            onClick={() => setTab("usuarios")}
-            className={`flex items-center gap-2 whitespace-nowrap pb-3 px-3 font-bold text-sm border-b-2 transition cursor-pointer ${
-              tab === "usuarios"
-                ? "border-[#f4c430] text-[#f4c430]"
-                : "border-transparent text-stone-400 hover:text-stone-200"
-            }`}
-          >
-
-            <Users className="w-4 h-4" />
-
-            Usuarios
-
-          </button>
-
-
-          <button
-            onClick={() => setTab("refugios")}
-            className={`flex items-center gap-2 whitespace-nowrap pb-3 px-3 font-bold text-sm border-b-2 transition cursor-pointer ${
-              tab === "refugios"
-                ? "border-[#f4c430] text-[#f4c430]"
-                : "border-transparent text-stone-400 hover:text-stone-200"
-            }`}
-          >
-
-            <Building2 className="w-4 h-4" />
-
-            Refugios
-
-          </button>
-
-
-          <button
-            onClick={() => setTab("mascotas")}
-            className={`flex items-center gap-2 whitespace-nowrap pb-3 px-3 font-bold text-sm border-b-2 transition cursor-pointer ${
-              tab === "mascotas"
-                ? "border-[#f4c430] text-[#f4c430]"
-                : "border-transparent text-stone-400 hover:text-stone-200"
-            }`}
-          >
-
-            <Dog className="w-4 h-4" />
-
-            Mascotas
-
-          </button>
-
-
-          <button
-            onClick={() => setTab("adopciones")}
-            className={`flex items-center gap-2 whitespace-nowrap pb-3 px-3 font-bold text-sm border-b-2 transition cursor-pointer ${
-              tab === "adopciones"
-                ? "border-[#f4c430] text-[#f4c430]"
-                : "border-transparent text-stone-400 hover:text-stone-200"
-            }`}
-          >
-
-            <Heart className="w-4 h-4" />
-
-            Adopciones
-
-          </button>
-
-
-          <button
-            onClick={() => setTab("reportes")}
-            className={`flex items-center gap-2 whitespace-nowrap pb-3 px-3 font-bold text-sm border-b-2 transition cursor-pointer ${
-              tab === "reportes"
-                ? "border-[#f4c430] text-[#f4c430]"
-                : "border-transparent text-stone-400 hover:text-stone-200"
-            }`}
-          >
-
-            <FileText className="w-4 h-4" />
-
-            Reportes
-
-          </button>
-
+          {(["resumen", "usuarios", "refugios", "mascotas", "adopciones", "reportes"] as const).map((item) => (
+            <button
+              key={item}
+              onClick={() => setTab(item)}
+              className={`capitalize pb-3 px-3 font-bold text-sm border-b-2 transition cursor-pointer ${
+                tab === item
+                  ? "border-[#f4c430] text-[#f4c430]"
+                  : "border-transparent text-stone-400 hover:text-stone-200"
+              }`}
+            >
+              {item}
+            </button>
+          ))}
         </div>
 
-
-        {/* ======================================================
-            RESUMEN
-        ====================================================== */}
-
+        {/* PESTAÑA: RESUMEN */}
         {tab === "resumen" && (
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-            <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6">
-
-              <div className="flex items-center gap-3 mb-6">
-
-                <BarChart3 className="w-5 h-5 text-[#f4c430]" />
-
-                <h2 className="font-bold text-white">
-                  Resumen de la plataforma
-                </h2>
-
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-stone-900 border border-stone-800 p-5 rounded-2xl">
+                <div className="flex items-center gap-3 mb-2">
+                  <AlertTriangle className="w-5 h-5 text-amber-400" />
+                  <h3 className="font-bold text-white text-sm">Refugios por Validar</h3>
+                </div>
+                <p className="text-2xl font-black text-amber-400">{estadisticas.refugiosPendientes}</p>
+                <p className="text-xs text-stone-400 mt-1">Refugios en estado pendiente de aprobación.</p>
+                <button
+                  onClick={() => setTab("refugios")}
+                  className="mt-4 text-xs text-[#f4c430] hover:underline font-bold cursor-pointer"
+                >
+                  Ir a Refugios →
+                </button>
               </div>
 
-              <div className="space-y-4">
-
-                <div>
-
-                  <div className="flex justify-between text-xs mb-2">
-
-                    <span className="text-stone-400">
-                      Usuarios
-                    </span>
-
-                    <span className="text-white font-bold">
-                      {estadisticas.usuarios}
-                    </span>
-
-                  </div>
-
-                  <div className="h-2 bg-stone-800 rounded-full">
-
-                    <div
-                      className="h-2 bg-blue-500 rounded-full"
-                      style={{
-                        width: `${Math.min(
-                          estadisticas.usuarios,
-                          100
-                        )}%`,
-                      }}
-                    />
-
-                  </div>
-
+              <div className="bg-stone-900 border border-stone-800 p-5 rounded-2xl">
+                <div className="flex items-center gap-3 mb-2">
+                  <Clock className="w-5 h-5 text-blue-400" />
+                  <h3 className="font-bold text-white text-sm">Mascotas Pendientes</h3>
                 </div>
-
-
-                <div>
-
-                  <div className="flex justify-between text-xs mb-2">
-
-                    <span className="text-stone-400">
-                      Refugios
-                    </span>
-
-                    <span className="text-white font-bold">
-                      {estadisticas.refugios}
-                    </span>
-
-                  </div>
-
-                  <div className="h-2 bg-stone-800 rounded-full">
-
-                    <div
-                      className="h-2 bg-[#f4c430] rounded-full"
-                      style={{
-                        width: `${Math.min(
-                          estadisticas.refugios * 5,
-                          100
-                        )}%`,
-                      }}
-                    />
-
-                  </div>
-
-                </div>
-
-
-                <div>
-
-                  <div className="flex justify-between text-xs mb-2">
-
-                    <span className="text-stone-400">
-                      Mascotas
-                    </span>
-
-                    <span className="text-white font-bold">
-                      {estadisticas.mascotas}
-                    </span>
-
-                  </div>
-
-                  <div className="h-2 bg-stone-800 rounded-full">
-
-                    <div
-                      className="h-2 bg-emerald-500 rounded-full"
-                      style={{
-                        width: `${Math.min(
-                          estadisticas.mascotas,
-                          100
-                        )}%`,
-                      }}
-                    />
-
-                  </div>
-
-                </div>
-
-
-                <div>
-
-                  <div className="flex justify-between text-xs mb-2">
-
-                    <span className="text-stone-400">
-                      Adopciones
-                    </span>
-
-                    <span className="text-white font-bold">
-                      {estadisticas.adopciones}
-                    </span>
-
-                  </div>
-
-                  <div className="h-2 bg-stone-800 rounded-full">
-
-                    <div
-                      className="h-2 bg-red-500 rounded-full"
-                      style={{
-                        width: `${Math.min(
-                          estadisticas.adopciones * 3,
-                          100
-                        )}%`,
-                      }}
-                    />
-
-                  </div>
-
-                </div>
-
+                <p className="text-2xl font-black text-blue-400">{estadisticas.mascotasPendientes}</p>
+                <p className="text-xs text-stone-400 mt-1">Publicaciones en espera de aprobación.</p>
+                <button
+                  onClick={() => setTab("mascotas")}
+                  className="mt-4 text-xs text-[#f4c430] hover:underline font-bold cursor-pointer"
+                >
+                  Ir a Mascotas →
+                </button>
               </div>
 
+              <div className="bg-stone-900 border border-stone-800 p-5 rounded-2xl">
+                <div className="flex items-center gap-3 mb-2">
+                  <FileText className="w-5 h-5 text-emerald-400" />
+                  <h3 className="font-bold text-white text-sm">Solicitudes Pendientes</h3>
+                </div>
+                <p className="text-2xl font-black text-emerald-400">{estadisticas.solicitudesPendientes}</p>
+                <p className="text-xs text-stone-400 mt-1">Trámites activos entre adoptantes y refugios.</p>
+                <button
+                  onClick={() => setTab("adopciones")}
+                  className="mt-4 text-xs text-[#f4c430] hover:underline font-bold cursor-pointer"
+                >
+                  Ir a Adopciones →
+                </button>
+              </div>
             </div>
-
-
-            <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6">
-
-              <div className="flex items-center gap-3 mb-6">
-
-                <Clock className="w-5 h-5 text-amber-400" />
-
-                <h2 className="font-bold text-white">
-                  Pendientes de atención
-                </h2>
-
-              </div>
-
-              <div className="space-y-4">
-
-                <div className="flex justify-between items-center bg-stone-950 p-4 rounded-xl">
-
-                  <span className="text-sm text-stone-300">
-                    Refugios por verificar
-                  </span>
-
-                  <span className="bg-amber-500/10 text-amber-400 px-3 py-1 rounded-full text-xs font-bold">
-                    {estadisticas.refugiosPendientes}
-                  </span>
-
-                </div>
-
-
-                <div className="flex justify-between items-center bg-stone-950 p-4 rounded-xl">
-
-                  <span className="text-sm text-stone-300">
-                    Mascotas por revisar
-                  </span>
-
-                  <span className="bg-amber-500/10 text-amber-400 px-3 py-1 rounded-full text-xs font-bold">
-                    {estadisticas.mascotasPendientes}
-                  </span>
-
-                </div>
-
-
-                <div className="flex justify-between items-center bg-stone-950 p-4 rounded-xl">
-
-                  <span className="text-sm text-stone-300">
-                    Solicitudes de adopción
-                  </span>
-
-                  <span className="bg-red-500/10 text-red-400 px-3 py-1 rounded-full text-xs font-bold">
-                    {estadisticas.solicitudesPendientes}
-                  </span>
-
-                </div>
-
-              </div>
-
-            </div>
-
           </div>
-
         )}
 
-
-        {/* ======================================================
-            USUARIOS
-        ====================================================== */}
-
+        {/* PESTAÑA: USUARIOS */}
         {tab === "usuarios" && (
-
-          <div className="space-y-5">
-
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-
+          <div className="space-y-4">
+            <div className="flex flex-col md:flex-row justify-between gap-4">
               <div>
-
-                <h2 className="text-lg font-bold text-white">
-                  Gestión de Usuarios
-                </h2>
-
-                <p className="text-xs text-stone-400">
-                  Usuarios registrados en Patitas al Hogar
-                </p>
-
+                <h2 className="text-lg font-bold text-white">Directorio de Usuarios</h2>
+                <p className="text-xs text-stone-400">Perfiles registrados en la tabla 'profiles'</p>
               </div>
-
               <div className="relative">
-
                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-stone-500" />
-
                 <input
                   value={busquedaUsuario}
-                  onChange={(e) =>
-                    setBusquedaUsuario(e.target.value)
-                  }
+                  onChange={(e) => setBusquedaUsuario(e.target.value)}
                   placeholder="Buscar usuario..."
                   className="bg-stone-900 border border-stone-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white outline-none focus:border-[#f4c430]"
                 />
-
               </div>
-
             </div>
-
 
             <div className="bg-stone-900 border border-stone-800 rounded-2xl overflow-hidden">
-
-              <div className="overflow-x-auto">
-
-                <table className="w-full text-sm">
-
-                  <thead className="bg-stone-950">
-
-                    <tr>
-
-                      <th className="text-left p-4 text-stone-400">
-                        Nombre
-                      </th>
-
-                      <th className="text-left p-4 text-stone-400">
-                        Rol
-                      </th>
-
-                      <th className="text-left p-4 text-stone-400">
-                        Fecha
-                      </th>
-
-                      <th className="text-right p-4 text-stone-400">
-                        Acción
-                      </th>
-
-                    </tr>
-
-                  </thead>
-
-                  <tbody>
-
-                    {usuariosFiltrados.map((usuario) => (
-
-                      <tr
-                        key={usuario.id}
-                        className="border-t border-stone-800"
-                      >
-
-                        <td className="p-4 text-white font-semibold">
-                          {usuario.nombre}
-                        </td>
-
-                        <td className="p-4">
-
-                          <span className="bg-stone-800 text-stone-300 px-2 py-1 rounded-lg text-xs">
-                            {usuario.rol}
-                          </span>
-
-                        </td>
-
-                        <td className="p-4 text-stone-400 text-xs">
-                          {new Date(
-                            usuario.created_at
-                          ).toLocaleDateString()}
-                        </td>
-
-                        <td className="p-4 text-right">
-
-                          {usuario.rol !== "admin" && (
-
-                            <button
-                              onClick={() =>
-                                cambiarEstadoUsuario(
-                                  usuario.id,
-                                  "inactivo"
-                                )
-                              }
-                              className="text-red-400 hover:text-red-300 text-xs font-bold"
-                            >
-
-                              Desactivar
-
-                            </button>
-
-                          )}
-
-                        </td>
-
-                      </tr>
-
-                    ))}
-
-                  </tbody>
-
-                </table>
-
+              <div className="divide-y divide-stone-800">
+                {usuariosFiltrados.map((u) => (
+                  <div key={u.id} className="p-4 flex justify-between items-center text-sm">
+                    <div>
+                      <p className="font-bold text-white">{u.nombre || "Sin nombre"}</p>
+                      <p className="text-xs text-stone-400">{u.email || u.id}</p>
+                    </div>
+                    <span className="bg-stone-800 text-stone-300 text-xs px-3 py-1 rounded-full font-semibold border border-stone-700 capitalize">
+                      {u.rol}
+                    </span>
+                  </div>
+                ))}
               </div>
-
             </div>
-
           </div>
-
         )}
 
-
-        {/* ======================================================
-            REFUGIOS
-        ====================================================== */}
-
+        {/* PESTAÑA: REFUGIOS (Usando la tabla 'refugios') */}
         {tab === "refugios" && (
-
           <div className="space-y-4">
-
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-
+            <div className="flex flex-col md:flex-row justify-between gap-4">
               <div>
-
-                <h2 className="text-lg font-bold text-white">
-                  Validación de Refugios
-                </h2>
-
-                <p className="text-xs text-stone-400">
-                  Revisión de los refugios registrados
-                </p>
-
+                <h2 className="text-lg font-bold text-white">Validación de Refugios</h2>
+                <p className="text-xs text-stone-400">Entidades registradas en la tabla 'refugios'</p>
               </div>
-
               <div className="relative">
-
                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-stone-500" />
-
                 <input
                   value={busquedaRefugio}
-                  onChange={(e) =>
-                    setBusquedaRefugio(e.target.value)
-                  }
+                  onChange={(e) => setBusquedaRefugio(e.target.value)}
                   placeholder="Buscar refugio..."
                   className="bg-stone-900 border border-stone-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white outline-none focus:border-[#f4c430]"
                 />
-
               </div>
-
             </div>
-
 
             <div className="grid gap-4">
-
-              {refugios.map((refugio) => (
-
+              {refugiosFiltrados.map((refugio) => (
                 <div
                   key={refugio.id}
-                  className="bg-stone-900 border border-stone-800 p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+                  className="bg-stone-900 border border-stone-800 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
                 >
-
-                  <div>
-
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2">
-
-                      <h3 className="font-bold text-white">
-                        {refugio.nombre}
-                      </h3>
-
-                      {refugio.refugio_verificado ? (
-
-                        <span className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-
-                          <CheckCircle2 className="w-3 h-3" />
-
-                          Verificado
-
+                      <h3 className="font-bold text-white">{refugio.nombre}</h3>
+                      {refugio.estado === "aprobado" ? (
+                        <span className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Aprobado
                         </span>
-
                       ) : (
-
-                        <span className="bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-
-                          <Clock className="w-3 h-3" />
-
-                          Pendiente
-
+                        <span className="bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> {refugio.estado || "Pendiente"}
                         </span>
-
                       )}
-
                     </div>
 
-                    <p className="text-xs text-stone-400 mt-1">
-
-                      ID / Documento:
-
-                      <span className="text-stone-200 font-mono ml-1">
-
-                        {refugio.ruc_o_identificacion ||
-                          "Sin registrar"}
-
-                      </span>
-
-                    </p>
-
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-400 pt-1">
+                      {refugio.responsable && (
+                        <span className="flex items-center gap-1">
+                          <UserCheck className="w-3.5 h-3.5 text-stone-500" /> Responsable: {refugio.responsable}
+                        </span>
+                      )}
+                      {refugio.telefono && (
+                        <span className="flex items-center gap-1">
+                          <Phone className="w-3.5 h-3.5 text-stone-500" /> {refugio.telefono}
+                        </span>
+                      )}
+                      {(refugio.ciudad || refugio.direccion) && (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-stone-500" /> {[refugio.ciudad, refugio.direccion].filter(Boolean).join(" - ")}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-
-                  <div>
-
-                    {refugio.refugio_verificado ? (
-
+                  <div className="flex items-center gap-2">
+                    {refugio.estado !== "aprobado" ? (
                       <button
-                        onClick={() =>
-                          cambiarVerificacionRefugio(
-                            refugio.id,
-                            false
-                          )
-                        }
-                        className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs px-3 py-2 rounded-xl transition font-semibold cursor-pointer"
+                        onClick={() => cambiarEstadoRefugio(refugio.id, "aprobado")}
+                        className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition cursor-pointer"
                       >
-
-                        <X className="w-4 h-4 inline mr-1" />
-
-                        Revocar
-
+                        <Check className="w-4 h-4" /> Aprobar
                       </button>
-
                     ) : (
-
                       <button
-                        onClick={() =>
-                          cambiarVerificacionRefugio(
-                            refugio.id,
-                            true
-                          )
-                        }
-                        className="bg-[#f4c430] hover:bg-[#e0b020] text-stone-950 text-xs px-4 py-2 rounded-xl font-bold transition cursor-pointer"
+                        onClick={() => cambiarEstadoRefugio(refugio.id, "pendiente")}
+                        className="flex items-center gap-1 bg-stone-800 hover:bg-red-900/50 text-red-400 text-xs font-bold px-3 py-1.5 rounded-lg border border-stone-700 transition cursor-pointer"
                       >
-
-                        <Check className="w-4 h-4 inline mr-1" />
-
-                        Aprobar
-
+                        <X className="w-4 h-4" /> Revocar
                       </button>
-
                     )}
-
                   </div>
-
                 </div>
-
               ))}
-
             </div>
-
           </div>
-
         )}
 
-
-        {/* ======================================================
-            MASCOTAS
-        ====================================================== */}
-
+        {/* PESTAÑA: MASCOTAS */}
         {tab === "mascotas" && (
-
-          <div className="space-y-5">
-
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-
+          <div className="space-y-4">
+            <div className="flex flex-col md:flex-row justify-between gap-4">
               <div>
-
-                <h2 className="text-lg font-bold text-white">
-                  Revisión de Mascotas
-                </h2>
-
-                <p className="text-xs text-stone-400">
-                  Aprobar o rechazar publicaciones de mascotas
-                </p>
-
+                <h2 className="text-lg font-bold text-white">Aprobación de Mascotas</h2>
+                <p className="text-xs text-stone-400">Moderación del catálogo general</p>
               </div>
-
               <div className="relative">
-
                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-stone-500" />
-
                 <input
                   value={busquedaMascota}
-                  onChange={(e) =>
-                    setBusquedaMascota(e.target.value)
-                  }
+                  onChange={(e) => setBusquedaMascota(e.target.value)}
                   placeholder="Buscar mascota..."
                   className="bg-stone-900 border border-stone-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white outline-none focus:border-[#f4c430]"
                 />
-
               </div>
-
             </div>
 
-
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-
+            <div className="grid gap-4">
               {mascotasFiltradas.map((mascota) => (
-
-                <div
-                  key={mascota.id}
-                  className="bg-stone-900 border border-stone-800 rounded-2xl overflow-hidden flex flex-col"
-                >
-
-                  <div className="relative h-48 bg-stone-950">
-
-                    <img
-                      src={mascota.imagen}
-                      alt={mascota.nombre}
-                      className="w-full h-full object-cover"
-                    />
-
-                    <span
-                      className={`absolute top-3 right-3 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border backdrop-blur-md ${
-                        mascota.estado === "aprobado"
-                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-                          : mascota.estado === "rechazado"
-                          ? "bg-red-500/20 text-red-300 border-red-500/30"
-                          : "bg-amber-500/20 text-amber-300 border-amber-500/30"
-                      }`}
-                    >
-
-                      {mascota.estado}
-
-                    </span>
-
+                <div key={mascota.id} className="bg-stone-900 border border-stone-800 p-4 rounded-2xl flex justify-between items-center">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-white">{mascota.nombre}</p>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
+                        mascota.estado === "aprobado" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" :
+                        mascota.estado === "rechazado" ? "bg-red-500/10 text-red-400 border border-red-500/30" :
+                        "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                      }`}>
+                        {mascota.estado}
+                      </span>
+                    </div>
+                    <p className="text-xs text-stone-400 mt-1">{mascota.raza} • {mascota.edad}</p>
                   </div>
-
-
-                  <div className="p-4 space-y-1.5 flex-grow">
-
-                    <h3 className="font-extrabold text-white text-lg">
-                      {mascota.nombre}
-                    </h3>
-
-                    <p className="text-xs text-stone-400">
-
-                      Raza:
-
-                      <strong className="text-stone-200 ml-1">
-                        {mascota.raza}
-                      </strong>
-
-                    </p>
-
-                    <p className="text-xs text-stone-400">
-
-                      Edad:
-
-                      <strong className="text-stone-200 ml-1">
-                        {mascota.edad}
-                      </strong>
-
-                    </p>
-
-                    <p className="text-xs text-stone-400">
-
-                      Refugio:
-
-                      <strong className="text-[#f4c430] ml-1">
-                        {mascota.perfiles?.nombre ||
-                          "No especificado"}
-                      </strong>
-
-                    </p>
-
+                  <div className="flex gap-2">
+                    <button onClick={() => cambiarEstadoMascota(mascota.id, "aprobado")} className="bg-emerald-600 hover:bg-emerald-500 text-xs font-bold px-3 py-1.5 rounded-lg text-white transition cursor-pointer">Aprobar</button>
+                    <button onClick={() => cambiarEstadoMascota(mascota.id, "rechazado")} className="bg-red-600 hover:bg-red-500 text-xs font-bold px-3 py-1.5 rounded-lg text-white transition cursor-pointer">Rechazar</button>
                   </div>
-
-
-                  <div className="p-4 pt-0 grid grid-cols-2 gap-2">
-
-                    <button
-                      onClick={() =>
-                        cambiarEstadoMascota(
-                          mascota.id,
-                          "rechazado"
-                        )
-                      }
-                      className="flex items-center justify-center gap-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs py-2 rounded-xl transition font-bold cursor-pointer"
-                    >
-
-                      <X className="w-3.5 h-3.5" />
-
-                      Rechazar
-
-                    </button>
-
-
-                    <button
-                      onClick={() =>
-                        cambiarEstadoMascota(
-                          mascota.id,
-                          "aprobado"
-                        )
-                      }
-                      className="flex items-center justify-center gap-1 bg-[#f4c430] hover:bg-[#e0b020] text-stone-950 text-xs py-2 rounded-xl transition font-bold cursor-pointer"
-                    >
-
-                      <Check className="w-3.5 h-3.5" />
-
-                      Aprobar
-
-                    </button>
-
-                  </div>
-
                 </div>
-
               ))}
-
             </div>
-
           </div>
-
         )}
 
-
-        {/* ======================================================
-            ADOPCIONES
-        ====================================================== */}
-
+        {/* PESTAÑA: ADOPCIONES */}
         {tab === "adopciones" && (
-
-          <div className="space-y-5">
-
-            <div>
-
-              <h2 className="text-lg font-bold text-white">
-                Solicitudes de Adopción
-              </h2>
-
-              <p className="text-xs text-stone-400">
-                Supervisión de las solicitudes realizadas
-              </p>
-
+          <div className="space-y-4">
+            <h2 className="text-lg font-bold text-white">Historial de Solicitudes</h2>
+            <div className="bg-stone-900 border border-stone-800 rounded-2xl overflow-hidden divide-y divide-stone-800">
+              {solicitudes.map((s) => (
+                <div key={s.id} className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-2 text-sm">
+                  <div>
+                    <p className="font-bold text-white">Mascota: {s.mascotas?.nombre || "N/A"}</p>
+                    <p className="text-xs text-stone-400">Adoptante: {s.adoptante?.nombre || "N/A"}</p>
+                  </div>
+                  <span className="bg-stone-800 text-stone-300 text-xs px-3 py-1 rounded-full font-semibold border border-stone-700 capitalize">
+                    {s.estado}
+                  </span>
+                </div>
+              ))}
             </div>
-
-
-            <div className="bg-stone-900 border border-stone-800 rounded-2xl overflow-hidden">
-
-              <div className="overflow-x-auto">
-
-                <table className="w-full text-sm">
-
-                  <thead className="bg-stone-950">
-
-                    <tr>
-
-                      <th className="text-left p-4 text-stone-400">
-                        Mascota
-                      </th>
-
-                      <th className="text-left p-4 text-stone-400">
-                        Adoptante
-                      </th>
-
-                      <th className="text-left p-4 text-stone-400">
-                        Refugio
-                      </th>
-
-                      <th className="text-left p-4 text-stone-400">
-                        Estado
-                      </th>
-
-                      <th className="text-right p-4 text-stone-400">
-                        Fecha
-                      </th>
-
-                    </tr>
-
-                  </thead>
-
-                  <tbody>
-
-                    {solicitudes.map((solicitud) => (
-
-                      <tr
-                        key={solicitud.id}
-                        className="border-t border-stone-800"
-                      >
-
-                        <td className="p-4 text-white font-bold">
-
-                          {solicitud.mascotas?.nombre ||
-                            "Sin nombre"}
-
-                        </td>
-
-                        <td className="p-4 text-stone-300">
-
-                          {solicitud.adoptante?.nombre ||
-                            "Sin nombre"}
-
-                        </td>
-
-                        <td className="p-4 text-[#f4c430]">
-
-                          {solicitud.refugio?.nombre ||
-                            "Sin refugio"}
-
-                        </td>
-
-                        <td className="p-4">
-
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                              solicitud.estado ===
-                              "aprobada"
-                                ? "bg-emerald-500/10 text-emerald-400"
-                                : solicitud.estado ===
-                                  "rechazada"
-                                ? "bg-red-500/10 text-red-400"
-                                : solicitud.estado ===
-                                  "finalizada"
-                                ? "bg-blue-500/10 text-blue-400"
-                                : "bg-amber-500/10 text-amber-400"
-                            }`}
-                          >
-
-                            {solicitud.estado}
-
-                          </span>
-
-                        </td>
-
-                        <td className="p-4 text-right text-stone-400 text-xs">
-
-                          {new Date(
-                            solicitud.created_at
-                          ).toLocaleDateString()}
-
-                        </td>
-
-                      </tr>
-
-                    ))}
-
-                  </tbody>
-
-                </table>
-
-              </div>
-
-            </div>
-
           </div>
-
         )}
 
-
-        {/* ======================================================
-            REPORTES
-        ====================================================== */}
-
+        {/* PESTAÑA: REPORTES */}
         {tab === "reportes" && (
-
-          <div className="space-y-6">
-
-            <div>
-
-              <h2 className="text-lg font-bold text-white">
-                Reportes y Estadísticas
-              </h2>
-
-              <p className="text-xs text-stone-400">
-                Información general de la plataforma
-              </p>
-
+          <div className="bg-stone-900 border border-stone-800 p-6 rounded-2xl space-y-4">
+            <div className="flex items-center gap-2 text-[#f4c430]">
+              <BarChart3 className="w-5 h-5" />
+              <h2 className="text-lg font-bold text-white">Reportes y Analítica</h2>
             </div>
-
-
-            {/* RESUMEN */}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-
-              {/* MASCOTAS */}
-
-              <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6">
-
-                <div className="flex items-center gap-3 mb-5">
-
-                  <Dog className="w-5 h-5 text-emerald-400" />
-
-                  <h3 className="font-bold">
-                    Estado de mascotas
-                  </h3>
-
-                </div>
-
-
-                <div className="space-y-4">
-
-                  <div className="flex justify-between">
-
-                    <span className="text-stone-400">
-                      Pendientes
-                    </span>
-
-                    <span className="text-amber-400 font-bold">
-                      {
-                        mascotas.filter(
-                          (m) =>
-                            m.estado === "pendiente"
-                        ).length
-                      }
-                    </span>
-
-                  </div>
-
-
-                  <div className="flex justify-between">
-
-                    <span className="text-stone-400">
-                      Aprobadas
-                    </span>
-
-                    <span className="text-emerald-400 font-bold">
-                      {
-                        mascotas.filter(
-                          (m) =>
-                            m.estado === "aprobado"
-                        ).length
-                      }
-                    </span>
-
-                  </div>
-
-
-                  <div className="flex justify-between">
-
-                    <span className="text-stone-400">
-                      Rechazadas
-                    </span>
-
-                    <span className="text-red-400 font-bold">
-                      {
-                        mascotas.filter(
-                          (m) =>
-                            m.estado === "rechazado"
-                        ).length
-                      }
-                    </span>
-
-                  </div>
-
-                </div>
-
+            <p className="text-xs text-stone-400">Resumen consolidado del sistema</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="bg-stone-950 p-4 rounded-xl border border-stone-800">
+                <p className="text-stone-400">Tasa de Adopción Concluida</p>
+                <p className="text-xl font-bold text-white mt-1">
+                  {estadisticas.mascotas > 0 ? ((estadisticas.adopciones / estadisticas.mascotas) * 100).toFixed(1) : 0}%
+                </p>
               </div>
-
-
-              {/* REFUGIOS */}
-
-              <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6">
-
-                <div className="flex items-center gap-3 mb-5">
-
-                  <Building2 className="w-5 h-5 text-[#f4c430]" />
-
-                  <h3 className="font-bold">
-                    Estado de refugios
-                  </h3>
-
-                </div>
-
-
-                <div className="space-y-4">
-
-                  <div className="flex justify-between">
-
-                    <span className="text-stone-400">
-                      Verificados
-                    </span>
-
-                    <span className="text-emerald-400 font-bold">
-                      {
-                        refugios.filter(
-                          (r) =>
-                            r.refugio_verificado
-                        ).length
-                      }
-                    </span>
-
-                  </div>
-
-
-                  <div className="flex justify-between">
-
-                    <span className="text-stone-400">
-                      Pendientes
-                    </span>
-
-                    <span className="text-amber-400 font-bold">
-                      {
-                        refugios.filter(
-                          (r) =>
-                            !r.refugio_verificado
-                        ).length
-                      }
-                    </span>
-
-                  </div>
-
-                </div>
-
+              <div className="bg-stone-950 p-4 rounded-xl border border-stone-800">
+                <p className="text-stone-400">Proporción de Refugios Aprobados</p>
+                <p className="text-xl font-bold text-white mt-1">
+                  {estadisticas.refugios > 0 ? (((estadisticas.refugios - estadisticas.refugiosPendientes) / estadisticas.refugios) * 100).toFixed(1) : 0}%
+                </p>
               </div>
-
-
-              {/* ADOPCIONES */}
-
-              <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6">
-
-                <div className="flex items-center gap-3 mb-5">
-
-                  <Heart className="w-5 h-5 text-red-400" />
-
-                  <h3 className="font-bold">
-                    Solicitudes de adopción
-                  </h3>
-
-                </div>
-
-
-                <div className="space-y-4">
-
-                  <div className="flex justify-between">
-
-                    <span className="text-stone-400">
-                      Pendientes
-                    </span>
-
-                    <span className="text-amber-400 font-bold">
-                      {
-                        solicitudes.filter(
-                          (s) =>
-                            s.estado ===
-                            "pendiente"
-                        ).length
-                      }
-                    </span>
-
-                  </div>
-
-
-                  <div className="flex justify-between">
-
-                    <span className="text-stone-400">
-                      Aprobadas
-                    </span>
-
-                    <span className="text-emerald-400 font-bold">
-                      {
-                        solicitudes.filter(
-                          (s) =>
-                            s.estado ===
-                              "aprobada" ||
-                            s.estado ===
-                              "finalizada"
-                        ).length
-                      }
-                    </span>
-
-                  </div>
-
-
-                  <div className="flex justify-between">
-
-                    <span className="text-stone-400">
-                      Rechazadas
-                    </span>
-
-                    <span className="text-red-400 font-bold">
-                      {
-                        solicitudes.filter(
-                          (s) =>
-                            s.estado ===
-                            "rechazada"
-                        ).length
-                      }
-                    </span>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-
-              {/* USUARIOS */}
-
-              <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6">
-
-                <div className="flex items-center gap-3 mb-5">
-
-                  <Users className="w-5 h-5 text-blue-400" />
-
-                  <h3 className="font-bold">
-                    Usuarios por rol
-                  </h3>
-
-                </div>
-
-
-                <div className="space-y-4">
-
-                  <div className="flex justify-between">
-
-                    <span className="text-stone-400">
-                      Administradores
-                    </span>
-
-                    <span className="text-white font-bold">
-                      {
-                        usuarios.filter(
-                          (u) =>
-                            u.rol === "admin"
-                        ).length
-                      }
-                    </span>
-
-                  </div>
-
-
-                  <div className="flex justify-between">
-
-                    <span className="text-stone-400">
-                      Refugios
-                    </span>
-
-                    <span className="text-white font-bold">
-                      {
-                        usuarios.filter(
-                          (u) =>
-                            u.rol === "refugio"
-                        ).length
-                      }
-                    </span>
-
-                  </div>
-
-
-                  <div className="flex justify-between">
-
-                    <span className="text-stone-400">
-                      Adoptantes
-                    </span>
-
-                    <span className="text-white font-bold">
-                      {
-                        usuarios.filter(
-                          (u) =>
-                            u.rol === "adoptante"
-                        ).length
-                      }
-                    </span>
-
-                  </div>
-
-                </div>
-
-              </div>
-
             </div>
-
           </div>
-
         )}
-
       </div>
-
     </main>
   );
 }
