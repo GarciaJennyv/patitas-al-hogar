@@ -1,22 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+// GET: Obtener una mascota específica por su ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const { data: mascota, error } = await supabase
-      .from("mascotas")
-      .select("*")
-      .eq("id", id)
+      .from('mascotas')
+      .select('*')
+      .eq('id', id)
       .single();
 
     if (error || !mascota) {
       return NextResponse.json(
-        { error: "Mascota no encontrada" },
+        { error: 'Mascota no encontrada' },
         { status: 404 }
       );
     }
@@ -30,15 +31,13 @@ export async function GET(
 // PUT: Actualizar datos de una mascota por su ID
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
-    
     const { usuario_id, ...datosActualizar } = body;
 
-    // 1. Validar que se envíe el ID del usuario que solicita los cambios
     if (!usuario_id) {
       return NextResponse.json(
         { error: 'El usuario_id es requerido para verificar permisos.' },
@@ -46,7 +45,6 @@ export async function PUT(
       );
     }
 
-    // 2. Verificar el rol del usuario en 'profiles'
     const { data: perfil, error: perfilError } = await supabase
       .from('profiles')
       .select('rol')
@@ -65,7 +63,6 @@ export async function PUT(
       );
     }
 
-    // 3. Actualizar el registro en la base de datos
     const { data: mascotaActualizada, error: updateError } = await supabase
       .from('mascotas')
       .update(datosActualizar)
@@ -82,14 +79,13 @@ export async function PUT(
   }
 }
 
-
 // DELETE: Eliminar una mascota por su ID
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { searchParams } = new URL(request.url);
     const usuario_id = searchParams.get('usuario_id');
 
@@ -100,7 +96,6 @@ export async function DELETE(
       );
     }
 
-    // Verificar rol
     const { data: perfil, error: perfilError } = await supabase
       .from('profiles')
       .select('rol')
