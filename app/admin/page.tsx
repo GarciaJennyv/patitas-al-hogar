@@ -20,16 +20,15 @@ import {
   Search,
   RefreshCw,
   AlertTriangle,
-  UserCheck, // <- Agregar este
-  Phone,     // <- Agregar este
-  MapPin,    // <- Agregar este
+  UserCheck,
+  Phone,
+  MapPin,
 } from "lucide-react";
 
 interface Refugio {
   id: string;
   nombre: string;
   ruc_o_identificacion?: string;
-  refugio_verificado: boolean;
   responsable?: string;
   telefono?: string;
   direccion?: string;
@@ -40,8 +39,9 @@ interface Refugio {
 
 interface Usuario {
   id: string;
-  nombre: string;
-  email?: string;
+  nombres_apellidos?: string;
+  cedula?: string;
+  telefono?: string;
   rol: string;
   created_at: string;
 }
@@ -51,9 +51,8 @@ interface Mascota {
   nombre: string;
   raza: string;
   edad: string;
-  imagen: string;
-  estado: "pendiente" | "aprobado" | "rechazado";
-  user_id: string;
+  imagen_url?: string;
+  estado: "disponible" | "adoptado" | "pendiente" | "aprobado" | "rechazado";
 }
 
 interface Solicitud {
@@ -64,8 +63,7 @@ interface Solicitud {
   estado: "pendiente" | "aprobada" | "rechazada" | "finalizada";
   created_at: string;
   mascotas?: { nombre: string };
-  adoptante?: { nombre: string };
-  refugio?: { nombre: string };
+  refugios?: { nombre: string };
 }
 
 interface Estadisticas {
@@ -77,6 +75,7 @@ interface Estadisticas {
   mascotasPendientes: number;
   refugiosPendientes: number;
 }
+
 export default function AdminDashboardPage() {
   const [tab, setTab] = useState<
     "resumen" | "usuarios" | "refugios" | "mascotas" | "adopciones" | "reportes"
@@ -86,6 +85,7 @@ export default function AdminDashboardPage() {
   const [mascotas, setMascotas] = useState<Mascota[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
+  const [adminId, setAdminId] = useState<string>("");
 
   const [estadisticas, setEstadisticas] = useState<Estadisticas>({
     usuarios: 0,
@@ -109,103 +109,103 @@ export default function AdminDashboardPage() {
   }, []);
 
   const cargarDatos = async () => {
-    setLoading(true);
+  setLoading(true);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-    if (!user) {
-      router.push("/loginadmin");
-      return;
-    }
+  if (!user) {
+    router.push("/loginadmin");
+    return;
+  }
 
-    // Validar Rol de Administrador en 'profiles'
-    const { data: perfil } = await supabase
-      .from("profiles")
-      .select("rol")
-      .eq("id", user.id)
-      .single();
+  setAdminId(user.id);
 
-    if (perfil?.rol !== "admin") {
-      await supabase.auth.signOut();
-      router.push("/loginadmin");
-      return;
-    }
+  try {
+    // 1. Cargar Usuarios
+    const resUsuarios = await fetch(`/api/profiles?usuario_id=${user.id}`);
+    const dataUsuarios = await resUsuarios.json();
+    const listaUsuarios: any[] = dataUsuarios.data.map((u: any) => ({
+  id: u.id,
+  nombres_apellidos: u.nombre || u.email || "Usuario sin nombre",
+  cedula: u.cedula || "N/A",
+  telefono: u.telefono || "N/A",
+  rol: u.rol || "adoptante",
+  created_at: u.created_at,
+}));
 
-    // 1. Cargar Usuarios desde 'profiles'
-    const { data: usuariosData } = await supabase
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
+setUsuarios(listaUsuarios);
 
-    if (usuariosData) setUsuarios(usuariosData);
+// Filtrar refugios
+const listaRefugios = listaUsuarios
+  .filter((u) => u.rol === 'refugio')
+  .map((r) => ({
+    id: r.id,
+    nombre: r.nombres_apellidos,
+    telefono: r.telefono,
+    estado: 'aprobado',
+    created_at: r.created_at,
+  }));
 
-    // 2. Cargar Refugios directamente desde la tabla 'refugios'
-    const { data: refugiosData, error: refugiosErr } = await supabase
-  .from("profiles")
-  .select("*")
-  .eq("rol", "refugio");
-
-if (refugiosErr) console.error("Error refugios:", refugiosErr.message);
-if (refugiosData) setRefugios(refugiosData);
-
-    // 3. Cargar Mascotas desde 'mascotas'
-    const { data: mascotasData } = await supabase.from("mascotas").select("*");
-    if (mascotasData) setMascotas(mascotasData as Mascota[]);
+setRefugios(listaRefugios);
+    // 3. Cargar Mascotas
+    const resMascotas = await fetch("/api/mascotas");
+    const dataMascotas = await resMascotas.json();
+    const listaMascotas = dataMascotas.ok ? dataMascotas.data : [];
+    setMascotas(listaMascotas);
 
     // 4. Cargar Solicitudes
-    const { data: solicitudesData } = await supabase
-      .from("solicitudes_adopcion")
-      .select(`
-        *,
-        mascotas(nombre),
-        adoptante:profiles!solicitudes_adopcion_adoptante_id_fkey(nombre),
-        refugio:profiles!solicitudes_adopcion_refugio_id_fkey(nombre)
-      `)
-      .order("created_at", { ascending: false });
+    const resSolicitudes = await fetch("/api/solicitudes");
+    const dataSolicitudes = await resSolicitudes.json();
+    const listaSolicitudes = dataSolicitudes.ok ? dataSolicitudes.data : [];
+    setSolicitudes(listaSolicitudes);
 
-    if (solicitudesData) setSolicitudes(solicitudesData as Solicitud[]);
+    // 5. Actualizar Estadísticas
+    const totalAdopcionesConcluidas = 
+  // 1. Contar desde la tabla/array de mascotas
+  listaMascotas.filter(
+    (m: any) => m.estado?.toLowerCase() === "adoptado" || m.estado?.toLowerCase() === "adoptada"
+  ).length +
+  // 2. Contar desde la tabla/array de solicitudes
+  listaSolicitudes.filter(
+    (s: any) => s.estado?.toLowerCase() === "aprobada" || s.estado?.toLowerCase() === "finalizada"
+  ).length;
 
-    // Calcular Métricas basadas en la columna 'estado'
-    setEstadisticas({
-      usuarios: usuariosData?.length || 0,
-      refugios: refugiosData?.length || 0,
-      mascotas: mascotasData?.length || 0,
-      adopciones:
-        solicitudesData?.filter(
-          (s) => s.estado === "aprobada" || s.estado === "finalizada"
-        ).length || 0,
-      solicitudesPendientes:
-        solicitudesData?.filter((s) => s.estado === "pendiente").length || 0,
-      mascotasPendientes:
-        mascotasData?.filter((m) => m.estado === "pendiente").length || 0,
-      refugiosPendientes:
-        refugiosData?.filter((r) => r.estado === "pendiente").length || 0,
-    });
-
-    setLoading(false);
+setEstadisticas({
+  usuarios: listaUsuarios.length,
+  refugios: listaRefugios.length,
+  mascotas: listaMascotas.length,
+  adopciones: totalAdopcionesConcluidas, // 👈 Ahora marcará 1 por Lucas
+  solicitudesPendientes: listaSolicitudes.filter((s: any) => s.estado?.toLowerCase() === "pendiente").length,
+  mascotasPendientes: listaMascotas.filter((m: any) => m.estado?.toLowerCase() === "pendiente").length,
+  refugiosPendientes: 0,
+});
+    } catch (err) {
+      console.error("Error al cargar datos del dashboard:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const cambiarEstadoRefugio = async (id: string, nuevoEstado: string) => {
-    const { error } = await supabase
-      .from("refugios")
-      .update({ estado: nuevoEstado })
-      .eq("id", id);
+    const res = await fetch(`/api/refugios/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario_id: adminId, estado: nuevoEstado }),
+    });
 
-    if (!error) cargarDatos();
+    if (res.ok) cargarDatos();
   };
 
-  const cambiarEstadoMascota = async (
-    id: string,
-    nuevoEstado: "aprobado" | "rechazado"
-  ) => {
-    const { error } = await supabase
-      .from("mascotas")
-      .update({ estado: nuevoEstado })
-      .eq("id", id);
+  const cambiarEstadoMascota = async (id: string, nuevoEstado: string) => {
+    const res = await fetch(`/api/mascotas/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario_id: adminId, estado: nuevoEstado }),
+    });
 
-    if (!error) cargarDatos();
+    if (res.ok) cargarDatos();
   };
 
   const handleSignOut = async () => {
@@ -215,7 +215,7 @@ if (refugiosData) setRefugios(refugiosData);
   };
 
   const usuariosFiltrados = usuarios.filter((u) =>
-    u.nombre?.toLowerCase().includes(busquedaUsuario.toLowerCase())
+    (u.nombres_apellidos || u.id).toLowerCase().includes(busquedaUsuario.toLowerCase())
   );
 
   const refugiosFiltrados = refugios.filter((r) =>
@@ -374,7 +374,7 @@ if (refugiosData) setRefugios(refugiosData);
             <div className="flex flex-col md:flex-row justify-between gap-4">
               <div>
                 <h2 className="text-lg font-bold text-white">Directorio de Usuarios</h2>
-                <p className="text-xs text-stone-400">Perfiles registrados en la tabla 'profiles'</p>
+                <p className="text-xs text-stone-400">Perfiles registrados en la base de datos</p>
               </div>
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-stone-500" />
@@ -392,8 +392,8 @@ if (refugiosData) setRefugios(refugiosData);
                 {usuariosFiltrados.map((u) => (
                   <div key={u.id} className="p-4 flex justify-between items-center text-sm">
                     <div>
-                      <p className="font-bold text-white">{u.nombre || "Sin nombre"}</p>
-                      <p className="text-xs text-stone-400">{u.email || u.id}</p>
+                      <p className="font-bold text-white">{u.nombres_apellidos || "Usuario Sin Nombre"}</p>
+                      <p className="text-xs text-stone-400">Cédula: {u.cedula || "N/A"} • Teléfono: {u.telefono || "N/A"}</p>
                     </div>
                     <span className="bg-stone-800 text-stone-300 text-xs px-3 py-1 rounded-full font-semibold border border-stone-700 capitalize">
                       {u.rol}
@@ -405,13 +405,13 @@ if (refugiosData) setRefugios(refugiosData);
           </div>
         )}
 
-        {/* PESTAÑA: REFUGIOS (Usando la tabla 'refugios') */}
+        {/* PESTAÑA: REFUGIOS */}
         {tab === "refugios" && (
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row justify-between gap-4">
               <div>
                 <h2 className="text-lg font-bold text-white">Validación de Refugios</h2>
-                <p className="text-xs text-stone-400">Entidades registradas en la tabla 'refugios'</p>
+                <p className="text-xs text-stone-400">Entidades registradas en el sistema</p>
               </div>
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-stone-500" />
@@ -512,7 +512,7 @@ if (refugiosData) setRefugios(refugiosData);
                     <div className="flex items-center gap-2">
                       <p className="font-bold text-white">{mascota.nombre}</p>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
-                        mascota.estado === "aprobado" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" :
+                        mascota.estado === "aprobado" || mascota.estado === "disponible" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" :
                         mascota.estado === "rechazado" ? "bg-red-500/10 text-red-400 border border-red-500/30" :
                         "bg-amber-500/10 text-amber-400 border border-amber-500/30"
                       }`}>
@@ -540,7 +540,7 @@ if (refugiosData) setRefugios(refugiosData);
                 <div key={s.id} className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-2 text-sm">
                   <div>
                     <p className="font-bold text-white">Mascota: {s.mascotas?.nombre || "N/A"}</p>
-                    <p className="text-xs text-stone-400">Adoptante: {s.adoptante?.nombre || "N/A"}</p>
+                    <p className="text-xs text-stone-400">Refugio: {s.refugios?.nombre || "N/A"}</p>
                   </div>
                   <span className="bg-stone-800 text-stone-300 text-xs px-3 py-1 rounded-full font-semibold border border-stone-700 capitalize">
                     {s.estado}
