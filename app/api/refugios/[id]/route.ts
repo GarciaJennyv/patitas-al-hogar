@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> } // 👈 Declaramos params como Promise
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 1. Resolver params con await
@@ -19,11 +19,11 @@ export async function PUT(
       );
     }
 
-    // 2. Si la revocación implica cambiar el rol o estado en la tabla 'profiles'
+    // 2. Actualizar perfil del refugio
     const { data, error } = await supabase
       .from('profiles')
       .update({
-        rol: rol || 'adoptante', // Al revocar, se puede cambiar el rol de 'refugio' a 'adoptante'
+        rol: rol || 'adoptante',
       })
       .eq('id', id)
       .select();
