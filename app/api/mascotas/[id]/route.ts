@@ -1,23 +1,22 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-// GET: Obtener una mascota específica por su ID
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const { id } = params;
 
     const { data: mascota, error } = await supabase
-      .from('mascotas')
-      .select('*')
-      .eq('id', id)
+      .from("mascotas")
+      .select("*")
+      .eq("id", id)
       .single();
 
     if (error || !mascota) {
       return NextResponse.json(
-        { error: 'Mascota no encontrada' },
+        { error: "Mascota no encontrada" },
         { status: 404 }
       );
     }
@@ -30,12 +29,13 @@ export async function GET(
 
 // PUT: Actualizar datos de una mascota por su ID
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const { id } = params;
     const body = await request.json();
+    
     const { usuario_id, ...datosActualizar } = body;
 
     // 1. Validar que se envíe el ID del usuario que solicita los cambios
@@ -82,9 +82,10 @@ export async function PUT(
   }
 }
 
+
 // DELETE: Eliminar una mascota por su ID
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
