@@ -31,21 +31,21 @@ export default function LoginAdminPage() {
       console.log("Usuario autenticado ID:", userId);
 
       // 2. Consultar perfil usando maybeSingle() para evitar excepciones silenciosas de .single()
-      const { data: perfil, error: perfilError } = await supabase
-        .from("profiles")
-        .select("rol")
-        .eq("id", userId)
-        .maybeSingle();
+      const { data: profile, error: profileError } = await supabase
+  .from("profiles")
+  .select("rol")
+  .eq("id", userId)
+  .maybeSingle();
 
-      console.log("Resultado perfil:", perfil, "Error perfil:", perfilError);
+      console.log("Resultado perfil:", profile, "Error perfil:", profileError);
 
-      if (perfilError) {
-        throw new Error(`Error al verificar perfil: ${perfilError.message}`);
+      if (profileError) {
+        throw new Error(`Error al verificar perfil: ${profileError.message}`);
       }
 
-      if (!perfil || perfil.rol !== "admin") {
+      if (!profile || profile.rol !== "admin") {
         await supabase.auth.signOut();
-        throw new Error(`Acceso denegado: Tu rol actual es '${perfil?.rol || "desconocido"}'. Se requiere 'admin'.`);
+        throw new Error(`Acceso denegado: Tu rol actual es '${profile?.rol || "desconocido"}'. Se requiere 'admin'.`);
       }
 
       // 3. Redirigir al Dashboard
