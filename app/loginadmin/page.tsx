@@ -1,11 +1,12 @@
 "use client";
-
+import { createClient } from "@/utils/supabase/client"; 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { ShieldCheck, Lock, Mail } from "lucide-react";
 
 export default function LoginAdminPage() {
+  const supabase = createClient();
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,42 +20,52 @@ export default function LoginAdminPage() {
     setError("");
 
     try {
-      // 1. Iniciar sesión con Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-  email,
-  password,
-});
-
-if (authError) throw new Error("Credenciales inválidas. Verifica tu correo o contraseña.");
-
+    
 // 2. Consultar rol con .maybeSingle() para evitar excepciones si la consulta es nula
-// 1. Consultar el perfil del usuario autenticado
-const { data: perfil, error: perfilError } = await supabase
-  .from("profiles")
-  .select("rol")
-  .eq("id", authData.user.id)
-  .maybeSingle();
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-// 2. Si las políticas RLS o la conexión a la base de datos fallan
-if (perfilError) {
-  await supabase.auth.signOut();
-  throw new Error(`Error de lectura en DB (RLS): ${perfilError.message}`);
-}
+    if (authError) {
+      alert(`Error de autenticación: ${authError.message}`);
+      return;
+    }
 
-// 3. Si no existe la fila del perfil para este UID
-if (!perfil) {
-  await supabase.auth.signOut();
-  throw new Error("No se encontró ningún registro en la tabla 'profiles' para esta cuenta.");
-}
+    // 2. Obtener el usuario autenticado directamente de la sesión
+    const user = authData.user;
+    if (!user) {
+      alert("No se pudo obtener el usuario autenticado.");
+      return;
+    }
 
-// 4. Normalizar la cadena para evitar fallos por espacios o mayúsculas
-const rolNormalizado = perfil.rol ? String(perfil.rol).trim().toLowerCase() : "";
+    // 3. Consultar la tabla profiles
+    const { data: perfil, error: perfilError } = await supabase
+      .from("profiles")
+      .select("rol")
+      .eq("id", user.id)
+      .maybeSingle();
 
-// 5. Validar si el rol es realmente admin
-if (rolNormalizado !== "admin") {
-  await supabase.auth.signOut();
-  throw new Error(`Acceso denegado: Tu rol actual es '${perfil.rol}', pero se requiere 'admin'.`);
-}
+    if (perfilError) {
+      alert(`Error leyendo base de datos: ${perfilError.message}`);
+      return;
+    }
+
+    if (!perfil) {
+      alert("No existe un perfil registrado para esta cuenta.");
+      return;
+    }
+
+    // 4. Validar el rol
+    if (String(perfil.rol).trim().toLowerCase() !== "admin") {
+      await supabase.auth.signOut();
+      alert(`Acceso denegado: Tu rol es '${perfil.rol}', se requiere 'admin'.`);
+      return;
+    }
+
+    // 5. Redireccionar recargando la página para sincronizar la cookie SSR
+    window.location.href = "/admin/dashboard"; // Ajusta la ruta a tu panel
+  
 
       // 3. Redirigir al Dashboard (/admin)
       router.push("/admin");
