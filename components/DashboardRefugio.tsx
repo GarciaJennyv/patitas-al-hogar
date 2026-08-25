@@ -33,7 +33,7 @@ export default function DashboardRefugio() {
 
   // Modal (Crear / Editar)
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingPet, setEditingPet] = useState<Mascota null |>(null);
+  const [editingPet, setEditingPet] = useState<Mascota |null >(null);
 
   // Estado del formulario
   const [formData, setFormData] = useState({
