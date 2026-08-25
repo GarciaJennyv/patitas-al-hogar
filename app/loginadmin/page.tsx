@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { ShieldCheck, Lock, Mail } from "lucide-react";
 
 export default function LoginAdminPage() {
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,23 +21,40 @@ export default function LoginAdminPage() {
     try {
       // 1. Iniciar sesión con Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+  email,
+  password,
+});
 
-      if (authError) throw new Error("Credenciales inválidas. Verifica tu correo o contraseña.");
+if (authError) throw new Error("Credenciales inválidas. Verifica tu correo o contraseña.");
 
-      // 2. Verificar en la base de datos si el usuario tiene rol 'admin'
-      const { data: perfil, error: perfilError } = await supabase
-        .from("perfiles")
-        .select("rol")
-        .eq("id", authData.user.id)
-        .single();
+// 2. Consultar rol con .maybeSingle() para evitar excepciones si la consulta es nula
+// 1. Consultar el perfil del usuario autenticado
+const { data: perfil, error: perfilError } = await supabase
+  .from("profiles")
+  .select("rol")
+  .eq("id", authData.user.id)
+  .maybeSingle();
 
-      if (perfilError || perfil?.rol !== "admin") {
-        await supabase.auth.signOut(); // Revocar sesión si no es admin
-        throw new Error("Acceso denegado: Tu cuenta no tiene permisos de administrador.");
-      }
+// 2. Si las políticas RLS o la conexión a la base de datos fallan
+if (perfilError) {
+  await supabase.auth.signOut();
+  throw new Error(`Error de lectura en DB (RLS): ${perfilError.message}`);
+}
+
+// 3. Si no existe la fila del perfil para este UID
+if (!perfil) {
+  await supabase.auth.signOut();
+  throw new Error("No se encontró ningún registro en la tabla 'profiles' para esta cuenta.");
+}
+
+// 4. Normalizar la cadena para evitar fallos por espacios o mayúsculas
+const rolNormalizado = perfil.rol ? String(perfil.rol).trim().toLowerCase() : "";
+
+// 5. Validar si el rol es realmente admin
+if (rolNormalizado !== "admin") {
+  await supabase.auth.signOut();
+  throw new Error(`Acceso denegado: Tu rol actual es '${perfil.rol}', pero se requiere 'admin'.`);
+}
 
       // 3. Redirigir al Dashboard (/admin)
       router.push("/admin");
