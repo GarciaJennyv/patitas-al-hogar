@@ -1,13 +1,11 @@
 "use client";
-import { createClient } from "@/utils/supabase/client"; 
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import { ShieldCheck, Lock, Mail } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export default function LoginAdminPage() {
-  const supabase = createClient();
-  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,57 +18,38 @@ export default function LoginAdminPage() {
     setError("");
 
     try {
-    
-// 2. Consultar rol con .maybeSingle() para evitar excepciones si la consulta es nula
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+      // 1. Iniciar sesión con Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (authError) {
-      alert(`Error de autenticación: ${authError.message}`);
-      return;
-    }
+      if (authError) throw new Error("Credenciales inválidas. Verifica tu correo o contraseña.");
 
-    // 2. Obtener el usuario autenticado directamente de la sesión
-    const user = authData.user;
-    if (!user) {
-      alert("No se pudo obtener el usuario autenticado.");
-      return;
-    }
+      const userId = authData.user.id;
+      console.log("Usuario autenticado ID:", userId);
 
-    // 3. Consultar la tabla profiles
-    const { data: perfil, error: perfilError } = await supabase
-      .from("profiles")
-      .select("rol")
-      .eq("id", user.id)
-      .maybeSingle();
+      // 2. Consultar perfil usando maybeSingle() para evitar excepciones silenciosas de .single()
+      const { data: perfil, error: perfilError } = await supabase
+        .from("profiles")
+        .select("rol")
+        .eq("id", userId)
+        .maybeSingle();
 
-    if (perfilError) {
-      alert(`Error leyendo base de datos: ${perfilError.message}`);
-      return;
-    }
+      console.log("Resultado perfil:", perfil, "Error perfil:", perfilError);
 
-    if (!perfil) {
-      alert("No existe un perfil registrado para esta cuenta.");
-      return;
-    }
+      if (perfilError) {
+        throw new Error(`Error al verificar perfil: ${perfilError.message}`);
+      }
 
-    // 4. Validar el rol
-    if (String(perfil.rol).trim().toLowerCase() !== "admin") {
-      await supabase.auth.signOut();
-      alert(`Acceso denegado: Tu rol es '${perfil.rol}', se requiere 'admin'.`);
-      return;
-    }
+      if (!perfil || perfil.rol !== "admin") {
+        await supabase.auth.signOut();
+        throw new Error(`Acceso denegado: Tu rol actual es '${perfil?.rol || "desconocido"}'. Se requiere 'admin'.`);
+      }
 
-    // 5. Redireccionar recargando la página para sincronizar la cookie SSR
-    window.location.href = "/admin/dashboard"; // Ajusta la ruta a tu panel
-  
-
-      // 3. Redirigir al Dashboard (/admin)
+      // 3. Redirigir al Dashboard
       router.push("/admin");
-       router.refresh();
-      
+      router.refresh();
 
     } catch (err: any) {
       setError(err.message);
@@ -82,8 +61,6 @@ export default function LoginAdminPage() {
   return (
     <main className="min-h-screen bg-stone-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-stone-900 border border-stone-800 p-8 rounded-3xl space-y-6 shadow-2xl">
-        
-        {/* ENCABEZADO */}
         <div className="text-center space-y-2">
           <div className="inline-flex p-3 bg-[#f4c430]/10 border border-[#f4c430]/30 rounded-2xl text-[#f4c430] mb-2">
             <ShieldCheck className="w-8 h-8" />
@@ -92,14 +69,12 @@ export default function LoginAdminPage() {
           <p className="text-xs text-stone-400">Ingresa tus credenciales de administrador para continuar</p>
         </div>
 
-        {/* MENSAJE DE ERROR */}
         {error && (
           <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs p-3 rounded-xl text-center font-medium">
             {error}
           </div>
         )}
 
-        {/* FORMULARIO */}
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-1">
             <label className="text-xs font-bold text-stone-300">Correo Electrónico</label>
@@ -139,7 +114,6 @@ export default function LoginAdminPage() {
             {loading ? "Verificando Credenciales..." : "Ingresar al Panel"}
           </button>
         </form>
-
       </div>
     </main>
   );
