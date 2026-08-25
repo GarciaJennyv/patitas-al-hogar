@@ -131,12 +131,7 @@ export default function RefugioDashboardPage() {
             Gestión de publicaciones y solicitudes de adopción
           </p>
         </div>
-        <Link
-          href="/dashboard/refugio/publicar"
-          className="bg-amber-400 hover:bg-amber-500 text-stone-950 font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1"
-        >
-          <Plus className="w-4 h-4" /> Nueva Mascota
-        </Link>
+        
       </div>
 
       {/* Listado de Mascotas */}

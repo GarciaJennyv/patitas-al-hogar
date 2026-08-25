@@ -45,13 +45,7 @@ export default function DashboardLayout({
               <span className="hidden sm:inline">Panel</span>
             </Link>
 
-            <Link
-              href="/dashboard/razas"
-              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-stone-300 hover:text-[#f4c430] px-3 py-2 rounded-xl hover:bg-stone-700/50 transition"
-            >
-              <Compass className="w-4 h-4" />
-              <span className="hidden sm:inline">Razas API</span>
-            </Link>
+           
 
             {/* Enlace corregido a la pantalla de publicación */}
             <Link

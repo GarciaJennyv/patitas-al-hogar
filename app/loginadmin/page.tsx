@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Lock, Mail } from "lucide-react";
+import { ShieldCheck, Lock, Mail ,ArrowLeft} from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import Link from "next/link";
 
 export default function LoginAdminPage() {
   const [email, setEmail] = useState("");
@@ -60,6 +61,13 @@ export default function LoginAdminPage() {
 
   return (
     <main className="min-h-screen bg-stone-950 flex items-center justify-center p-4">
+       <Link
+        href="/"
+        className="absolute top-6 left-6 flex items-center gap-2 text-stone-400 hover:text-white text-sm font-semibold transition bg-stone-900 border border-stone-800 px-4 py-2 rounded-xl"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span>Volver al inicio</span>
+      </Link>
       <div className="w-full max-w-md bg-stone-900 border border-stone-800 p-8 rounded-3xl space-y-6 shadow-2xl">
         <div className="text-center space-y-2">
           <div className="inline-flex p-3 bg-[#f4c430]/10 border border-[#f4c430]/30 rounded-2xl text-[#f4c430] mb-2">
