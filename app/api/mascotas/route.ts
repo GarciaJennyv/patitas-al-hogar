@@ -1,105 +1,81 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-// GET: Obtener todas las mascotas
-export async function GET() {
+// GET: Obtener lista de mascotas (con filtros opcionales)
+export async function GET(request: NextRequest) {
   try {
-    const { data: mascotas, error } = await supabase
-      .from('mascotas')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { searchParams } = new URL(request.url);
+    const refugio_id = searchParams.get('refugio_id');
+    const estado = searchParams.get('estado');
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+    let query = supabase.from('mascotas').select('*');
+
+    if (refugio_id) {
+      query = query.eq('refugio_id', refugio_id);
     }
 
-    return NextResponse.json({ ok: true, data: mascotas });
+    if (estado) {
+      query = query.eq('estado', estado);
+    }
+
+    const { data: mascotas, error } = await query.order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return NextResponse.json({ ok: true, data: mascotas || [] });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
 }
 
-// POST: Registrar una nueva mascota
-export async function POST(request: Request) {
+// POST: Registrar una nueva mascota (requiere rol refugio o admin)
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
-      usuario_id,
-      nombre,
-      raza,
-      edad,
-      refugio_id,
-      estado,
-      descripcion,
-      imagen_url,
-      especie,
-      sexo,
-      tamano,
-      peso,
-      salud
-    } = body;
+    const { usuario_id, nombre, especie, edad, tamano, sexo, descripcion, imagen_url, refugio_id } = body;
 
-    // 1. Validar que vengan los datos obligatorios
-    if (!usuario_id || !nombre) {
+    if (!usuario_id || !nombre || !especie) {
       return NextResponse.json(
-        { error: 'El usuario_id y el nombre de la mascota son obligatorios.' },
+        { ok: false, error: 'Campos requeridos faltantes (usuario_id, nombre, especie).' },
         { status: 400 }
       );
     }
 
-    // 2. Verificar el rol del usuario en la tabla 'profiles'
+    // Verificar permisos del usuario
     const { data: perfil, error: perfilError } = await supabase
       .from('profiles')
       .select('rol')
       .eq('id', usuario_id)
       .single();
 
-    if (perfilError || !perfil) {
-      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
-    }
-
-    // 3. Validar si el rol es 'admin' o 'refugio'
-    const esPermitido = perfil.rol === 'admin' || perfil.rol === 'refugio';
-    if (!esPermitido) {
+    if (perfilError || !perfil || (perfil.rol !== 'admin' && perfil.rol !== 'refugio')) {
       return NextResponse.json(
-        { error: 'No tienes permisos para agregar mascotas.' },
+        { ok: false, error: 'No tienes permisos para registrar mascotas.' },
         { status: 403 }
       );
     }
 
-    // 4. Insertar la mascota en la base de datos
     const { data: nuevaMascota, error: insertError } = await supabase
       .from('mascotas')
       .insert([
         {
           nombre,
-          raza,
+          especie,
           edad,
-          refugio_id,
-          estado: estado || 'disponible',
+          tamano,
+          sexo,
           descripcion,
           imagen_url,
-          especie,
-          sexo,
-          tamano,
-          peso,
-          salud,
+          refugio_id,
+          estado: 'disponible',
         },
       ])
       .select();
 
-    if (insertError) {
-      return NextResponse.json({ error: insertError.message }, { status: 400 });
-    }
+    if (insertError) throw insertError;
 
     return NextResponse.json({ ok: true, data: nuevaMascota[0] }, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
 }

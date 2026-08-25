@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const adoptante_id = searchParams.get('adoptante_id');
     const refugio_id = searchParams.get('refugio_id');
 
-    // Consulta limpia a la tabla de solicitudes sin joins automáticos
+    // Consulta a la tabla de solicitudes sin joins automáticos
     let query = supabase.from('solicitudes_adopcion').select('*');
 
     if (adoptante_id) {

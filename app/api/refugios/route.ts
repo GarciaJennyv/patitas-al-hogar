@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 // GET: Listar todos los refugios
@@ -18,7 +18,7 @@ export async function GET() {
 }
 
 // POST: Registrar un nuevo refugio (Exclusivo para ADMIN)
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {

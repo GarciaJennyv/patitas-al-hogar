@@ -1,11 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const folder = (formData.get('folder') as string) || 'mascotas'; // Permite organizar en carpetas ('mascotas', 'refugios', etc.)
+    const folder = (formData.get('folder') as string) || 'mascotas'; // Organiza en carpetas ('mascotas', 'refugios', etc.)
 
     if (!file) {
       return NextResponse.json(
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const fileExt = file.name.split('.').pop();
     const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
 
-    // Convertir el archivo a ArrayBuffer para Supabase Storage
+    // Convertir el archivo a Uint8Array para Supabase Storage
     const bytes = await file.arrayBuffer();
     const buffer = new Uint8Array(bytes);
 
