@@ -181,38 +181,44 @@ export default function AdminDashboardPage() {
     if (mascotasData) setMascotas(mascotasData as Mascota[]);
 
     // 4. Solicitudes de Adopción
-    const { data: solicitudesData } = await supabase
-      .from("solicitudes_adopcion")
-      .select(`
-        *,
-        mascotas(nombre),
-        adoptante:profiles!solicitudes_adopcion_adoptante_id_fkey(nombre),
-        refugio:profiles!solicitudes_adopcion_refugio_id_fkey(nombre)
-      `)
-      .order("created_at", { ascending: false });
+   const { data: solicitudesData, error: solicitudesErr } = await supabase
+  .from("solicitudes_adopcion")
+  .select(`
+    *,
+    mascotas(nombre)
+  `)
+  .order("created_at", { ascending: false });
+
+if (solicitudesErr) console.error("Error en solicitudes:", solicitudesErr.message);
+if (solicitudesData) setSolicitudes(solicitudesData as Solicitud[]);
 
     if (solicitudesData) setSolicitudes(solicitudesData as Solicitud[]);
 
     // Métricas
+   const solicitudesAprobadas = solicitudesData?.filter((s) => {
+      const e = s.estado?.toLowerCase()?.trim();
+      return e === "aprobado" || e === "aprobada" || e === "finalizada" || e === "adoptado";
+    }) || [];
+
+    const mascotasAdoptadasUnicas = new Set(solicitudesAprobadas.map((s) => s.mascota_id));
+
+    // 2. Asignar las estadísticas corregidas
     setEstadisticas({
       usuarios: usuariosData?.length || 0,
       refugios: refugiosData?.length || 0,
       mascotas: mascotasData?.length || 0,
-      adopciones:
-        solicitudesData?.filter(
-          (s) => s.estado === "aprobada" || s.estado === "finalizada"
-        ).length || 0,
+      adopciones: mascotasAdoptadasUnicas.size,
       solicitudesPendientes:
-        solicitudesData?.filter((s) => s.estado === "pendiente").length || 0,
+        solicitudesData?.filter((s) => s.estado?.toLowerCase() === "pendiente").length || 0,
       mascotasPendientes:
-        mascotasData?.filter((m) => m.estado === "pendiente").length || 0,
+        mascotasData?.filter((m) => m.estado?.toLowerCase() === "pendiente").length || 0,
       refugiosPendientes:
-        refugiosData?.filter((r) => r.estado === "pendiente").length || 0,
+        refugiosData?.filter((r) => r.estado?.toLowerCase() === "pendiente").length || 0,
     });
 
     setLoading(false);
   };
-
+    
   const cambiarEstadoRefugio = async (id: string, nuevoEstado: string) => {
     const { error } = await supabase
       .from("refugios")
@@ -621,24 +627,37 @@ export default function AdminDashboardPage() {
 
         {/* PESTAÑA: ADOPCIONES */}
         {tab === "adopciones" && (
-          <div className="space-y-4">
-            <h2 className="text-lg font-bold text-white">Historial de Solicitudes</h2>
-            <div className="bg-stone-900 border border-stone-800 rounded-2xl overflow-hidden divide-y divide-stone-800">
-              {solicitudes.map((s) => (
-                <div key={s.id} className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-2 text-sm">
-                  <div>
-                    <p className="font-bold text-white">Mascota: {s.mascotas?.nombre || "N/A"}</p>
-                    <p className="text-xs text-stone-400">Adoptante: {s.adoptante?.nombre || "N/A"}</p>
-                  </div>
-                  <span className="bg-stone-800 text-stone-300 text-xs px-3 py-1 rounded-full font-semibold border border-stone-700 capitalize">
-                    {s.estado}
-                  </span>
-                </div>
-              ))}
+  <div className="space-y-4">
+    <h2 className="text-lg font-bold text-white">Historial de Solicitudes</h2>
+    
+    {solicitudes.length === 0 ? (
+      <div className="bg-stone-900 border border-stone-800 p-8 rounded-2xl text-center text-stone-400 text-xs">
+        No hay solicitudes de adopción registradas en el sistema.
+      </div>
+    ) : (
+      <div className="bg-stone-900 border border-stone-800 rounded-2xl overflow-hidden divide-y divide-stone-800">
+        {solicitudes.map((s: any) => (
+          <div key={s.id} className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-2 text-sm">
+            <div>
+              <p className="font-bold text-white">
+                Mascota: {s.mascotas?.nombre || "Mascota no especificada"}
+              </p>
+              <p className="text-xs text-stone-400">
+                Adoptante: {s.nombres_apellidos || s.adoptante?.nombre || "Sin nombre"}
+              </p>
+              {s.telefono_contacto && (
+                <p className="text-xs text-stone-500">Teléfono: {s.telefono_contacto}</p>
+              )}
             </div>
+            <span className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs px-3 py-1 rounded-full font-semibold capitalize">
+              {s.estado}
+            </span>
           </div>
-        )}
-
+        ))}
+      </div>
+    )}
+  </div>
+)}
         {/* PESTAÑA: REPORTES */}
         {tab === "reportes" && (
           <div className="bg-stone-900 border border-stone-800 p-6 rounded-2xl space-y-4">

@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
-import { ArrowLeft, Heart, Calendar, Dog, Loader2, X, CheckCircle2, Ruler } from "lucide-react";
+import { ArrowLeft, Heart, Calendar, Dog, Loader2, X, CheckCircle2, Ruler, Check } from "lucide-react";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -23,7 +23,6 @@ export default function PerroDetallePage({ params }: Props) {
   // =========================================================
   // ESTADOS DEL FORMULARIO COMPLETO DE ADOPCIÓN
   // =========================================================
-  // 1. Datos Personales
   const [nombres, setNombres] = useState("");
   const [cedula, setCedula] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
@@ -31,31 +30,26 @@ export default function PerroDetallePage({ params }: Props) {
   const [direccion, setDireccion] = useState("");
   const [ciudad, setCiudad] = useState("");
 
-  // 2. Información de la Vivienda
   const [tipoVivienda, setTipoVivienda] = useState("Casa");
   const [condicionVivienda, setCondicionVivienda] = useState("Propia");
   const [tienePatio, setTienePatio] = useState(false);
   const [viviendaSegura, setViviendaSegura] = useState(false);
 
-  // 3. Composición Familiar
   const [cantPersonas, setCantPersonas] = useState(1);
   const [tieneNinos, setTieneNinos] = useState(false);
   const [edadesNinos, setEdadesNinos] = useState("");
   const [familiaDeAcuerdo, setFamiliaDeAcuerdo] = useState(true);
 
-  // 4. Experiencia con Mascotas
   const [tuvoMascotasAntes, setTuvoMascotasAntes] = useState(false);
   const [tieneMascotasActuales, setTieneMascotasActuales] = useState(false);
   const [detalleMascotasActuales, setDetalleMascotasActuales] = useState("");
   const [mascotasVacunadas, setMascotasVacunadas] = useState(false);
 
-  // 5. Sobre la Adopción
   const [motivoAdopcion, setMotivoAdopcion] = useState("");
   const [responsablePrincipal, setResponsablePrincipal] = useState("");
   const [horasSola, setHorasSola] = useState("");
   const [planMudanza, setPlanMudanza] = useState("");
 
-  // 6. Compromisos
   const [compAlimentacion, setCompAlimentacion] = useState(false);
   const [compVeterinario, setCompVeterinario] = useState(false);
   const [compNoAbandono, setCompNoAbandono] = useState(false);
@@ -107,7 +101,6 @@ export default function PerroDetallePage({ params }: Props) {
         refugio_id: perro.refugio_id || perro.user_id || null,
         adoptante_id: user.id,
 
-        // 1. Datos Personales
         nombres_apellidos: nombres,
         cedula: cedula,
         fecha_nacimiento: fechaNacimiento,
@@ -115,31 +108,26 @@ export default function PerroDetallePage({ params }: Props) {
         direccion: direccion,
         ciudad: ciudad,
 
-        // 2. Vivienda
         tipo_vivienda: tipoVivienda,
         condicion_vivienda: condicionVivienda,
         tiene_patio: tienePatio,
         vivienda_segura: viviendaSegura,
 
-        // 3. Composición Familiar
         cant_personas: cantPersonas,
         tiene_ninos: tieneNinos,
         edades_ninos: tieneNinos ? edadesNinos : null,
         familia_de_acuerdo: familiaDeAcuerdo,
 
-        // 4. Experiencia
         tuvo_mascotas_antes: tuvoMascotasAntes,
         tiene_mascotas_actuales: tieneMascotasActuales,
         detalle_mascotas_actuales: tieneMascotasActuales ? detalleMascotasActuales : null,
         mascotas_vacunadas_esterilizadas: tieneMascotasActuales ? mascotasVacunadas : null,
 
-        // 5. Adopción
         motivo_adopcion: motivoAdopcion,
         responsable_principal: responsablePrincipal,
         horas_sola: horasSola,
         plan_mudanza: planMudanza,
 
-        // 6. Compromisos
         compromiso_alimentacion: compAlimentacion,
         compromiso_veterinario: compVeterinario,
         compromiso_no_abandono: compNoAbandono,
@@ -189,6 +177,10 @@ export default function PerroDetallePage({ params }: Props) {
 
   const imgUrl = perro.imagen_url || perro.imagen || perro.foto || "/placeholder.png";
 
+  // Evaluar si la mascota ya fue adoptada/aprobada
+  const estadoLimpio = perro.estado?.toLowerCase()?.trim();
+  const esAdoptado = estadoLimpio === "adoptado" || estadoLimpio === "adoptada" || estadoLimpio === "aprobado" || estadoLimpio === "aprobada";
+
   return (
     <main className="min-h-screen bg-slate-50 p-6 md:p-12 text-slate-800">
       <div className="max-w-4xl mx-auto">
@@ -208,7 +200,9 @@ export default function PerroDetallePage({ params }: Props) {
               className="w-full h-full object-cover"
             />
             {perro.estado && (
-              <span className="absolute top-4 left-4 bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md capitalize">
+              <span className={`absolute top-4 left-4 text-xs font-bold px-3 py-1 rounded-full shadow-md capitalize ${
+                esAdoptado ? "bg-emerald-600 text-white" : "bg-amber-500 text-slate-950"
+              }`}>
                 {perro.estado}
               </span>
             )}
@@ -255,23 +249,34 @@ export default function PerroDetallePage({ params }: Props) {
               </div>
             </div>
 
-            {/* Botón de Adopción */}
+            {/* Botón de Adopción Condicionado */}
             <div className="pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setMostrarModal(true)}
-                className="w-full bg-[#FFB800] hover:bg-[#e6a600] text-slate-950 font-extrabold py-3.5 rounded-2xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer text-sm"
-              >
-                <Heart className="w-4 h-4 fill-slate-950" />
-                <span>Solicitar Adopción</span>
-              </button>
+              {esAdoptado ? (
+                <button
+                  type="button"
+                  disabled
+                  className="w-full bg-slate-200 text-slate-500 font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 cursor-not-allowed text-sm border border-slate-300"
+                >
+                  <Check className="w-4 h-4 text-slate-500" />
+                  <span>Mascota Adoptada</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setMostrarModal(true)}
+                  className="w-full bg-[#FFB800] hover:bg-[#e6a600] text-slate-950 font-extrabold py-3.5 rounded-2xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer text-sm"
+                >
+                  <Heart className="w-4 h-4 fill-slate-950" />
+                  <span>Solicitar Adopción</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       {/* MODAL CUESTIONARIO COMPLETO */}
-      {mostrarModal && (
+      {mostrarModal && !esAdoptado && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl p-6 md:p-8 max-w-2xl w-full relative shadow-2xl max-h-[90vh] overflow-y-auto text-slate-800">
             <button
