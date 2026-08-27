@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
+  let response = NextResponse.next({//Intercepción Global y Refresco de Cookies
     request: { headers: request.headers },
   });
 
@@ -14,7 +14,7 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet) {//hasta aqui
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
       },
     }
   );
-
+//Verificación de Autenticación
   const { data: { user } } = await supabase.auth.getUser();
   const url = request.nextUrl.clone();
 
@@ -34,7 +34,7 @@ export async function middleware(request: NextRequest) {
   if (!user && url.pathname.startsWith('/dashboard')) {
     url.pathname = '/login';
     return NextResponse.redirect(url);
-  }
+  }// hata aqui
 
   // 2. Control de accesos según el ROL del usuario
   if (user && url.pathname.startsWith('/dashboard')) {

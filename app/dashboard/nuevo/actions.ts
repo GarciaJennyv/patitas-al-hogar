@@ -9,7 +9,7 @@ export async function crearMascota(formData: FormData) {
   const raza = formData.get("raza") as string;
   const edad = formData.get("edad") as string;
   const descripcion = formData.get("descripcion") as string;
-  const imagen = formData.get("imagen") as string;
+  const imagen = formData.get("imagen") as string;// hasta aqui
 
   // 1. Obtener sesión actual del usuario desde Supabase
   const {
@@ -31,7 +31,7 @@ export async function crearMascota(formData: FormData) {
       imagen,
       user_id: user.id,
     },
-  ]);
+  ]);// hasta aqui
 
   if (insertError) {
     console.error("Error Supabase:", insertError.message);
